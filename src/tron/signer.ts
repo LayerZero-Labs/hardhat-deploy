@@ -1,37 +1,30 @@
-// Linguo
-// gasLimit in EVM == energyConsumption in TVM
-// gasPrice in EVM == energyPrice in TVM
-import {ExternallyOwnedAccount} from '@ethersproject/abstract-signer';
-import {BigNumber, BytesLike, Wallet} from 'ethers';
-import {SigningKey, hexlify} from 'ethers/lib/utils';
+/** Tron Lingo
+ *  gasLimit in EVM == energyConsumption in TVM
+ *  gasPrice in EVM == energyPrice in TVM
+ */
+
+import {BigNumber, Wallet} from 'ethers';
+import {hexlify} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
-import {Time} from './utils';
+import {Time, TronWebGetTransactionError} from './utils';
 import {CreateSmartContract, TronTxMethods} from './types';
 import {TronWebError} from './utils';
-import {TronWebError1} from 'tronweb/interfaces';
+import {BlockTransaction, TronWebError1} from 'tronweb/interfaces';
 import {TransactionResponse} from '@ethersproject/providers';
 
 export class TronSigner extends Wallet {
-  public tronweb: TronWeb;
-  public tronProvider?: TronWeb3Provider;
+  protected tronweb: TronWeb;
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
   public energyFactors = new Map<string, {time: number; value: number}>();
 
   constructor(
     fullHost: string,
     headers: Record<string, string>,
-    privateKey: BytesLike | ExternallyOwnedAccount | SigningKey,
-    provider?: TronWeb3Provider
+    privateKey: string,
+    provider: TronWeb3Provider
   ) {
     super(privateKey, provider);
-    this.tronProvider = provider;
-    //TODO convert byteslike to string
-    if (typeof privateKey !== 'string') {
-      throw new Error(
-        'TronSigner currently only supports mnemonic or hex encoded private key'
-      );
-    }
     this.tronweb = new TronWeb({
       fullHost,
       headers,
@@ -102,14 +95,8 @@ export class TronSigner extends Wallet {
     return hexlify(adjusted);
   }
 
-  // cache the gasPrice with a 15sec TTL
   override async getGasPrice(): Promise<BigNumber> {
-    const DEFAULT_ENERGY_PRICE = BigNumber.from('1000');
-    const {time, value} = this.gasPrice;
-    if (time > Time.NOW - 15 * Time.SECOND && value) return value;
-    const gasPrice = (await super.getGasPrice()) ?? DEFAULT_ENERGY_PRICE;
-    this.gasPrice = {time: Time.NOW, value: gasPrice};
-    return gasPrice;
+    return this.provider.getGasPrice();
   }
 
   async getGasLimit(contract_address: string, data: string): Promise<string> {
@@ -139,5 +126,12 @@ export class TronSigner extends Wallet {
       value: energy_factor,
     });
     return energy_factor;
+  }
+
+  async getTronWebTransaction(hash: string): Promise<BlockTransaction> {
+    const res = await this.tronweb.trx.getTransaction(hash);
+    // Tronweb sometimes throws error, sometimes doesn't :-/ so let's check
+    if ('Error' in res) throw new TronWebGetTransactionError(res);
+    return res;
   }
 }
