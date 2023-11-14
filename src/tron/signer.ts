@@ -2,15 +2,15 @@
 // gasLimit in EVM == energyConsumption in TVM
 // gasPrice in EVM == energyPrice in TVM
 import {ExternallyOwnedAccount} from '@ethersproject/abstract-signer';
-
 import {BigNumber, BytesLike, Wallet} from 'ethers';
 import {SigningKey, hexlify} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
-import {Time} from './time';
-import {BuildTransaction, CreateSmartContract} from './types';
+import {Time} from './utils';
+import {CreateSmartContract, TronTxMethods} from './types';
 import {TronWebError} from './utils';
 import {TronWebError1} from 'tronweb/interfaces';
+import {TransactionResponse} from '@ethersproject/providers';
 
 export class TronSigner extends Wallet {
   public tronweb: TronWeb;
@@ -43,14 +43,16 @@ export class TronSigner extends Wallet {
     transaction: CreateSmartContract
   ): Promise<any> {
     switch (transaction.method) {
-      case BuildTransaction.CREATE:
+      case TronTxMethods.CREATE:
         return this.handleCreate(transaction);
       default:
         return super.sendTransaction(transaction);
     }
   }
 
-  async handleCreate(transaction: CreateSmartContract) {
+  async handleCreate(
+    transaction: CreateSmartContract
+  ): Promise<TransactionResponse> {
     delete transaction.method;
     delete transaction.data;
 
@@ -78,7 +80,10 @@ export class TronSigner extends Wallet {
     return txRes;
   }
 
-  async getFeeLimit(unsignedTx: any, overrides: any): Promise<string> {
+  async getFeeLimit(
+    unsignedTx: Record<string, any>,
+    overrides?: Record<string, any>
+  ): Promise<string> {
     // https://developers.tron.network/docs/set-feelimit#how-to-determine-the-feelimit-parameter
     // https://developers.tron.network/reference/getcontractinfo, get energy_factor
     // https://developers.tron.network/docs/resource-model#dynamic-energy-model, max factor
