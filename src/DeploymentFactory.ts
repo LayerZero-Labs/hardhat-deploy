@@ -100,19 +100,24 @@ export class DeploymentFactory {
     return this.factory.getDeployTransaction(...this.args, overrides);
   }
 
+  // TVM formula is identical than EVM except for the prefix: keccak256( 0x41 ++ address ++ salt ++ keccak256(init_code))[12:]
+  // https://developers.tron.network/v4.4.0/docs/vm-vs-evm#tvm-is-basically-compatible-with-evm-with-some-differences-in-details
   private async calculateEvmCreate2Address(
     create2DeployerAddress: Address,
-    salt: string
+    salt: string,
+    isTron?: boolean
   ): Promise<Address> {
     const deploymentTx = await this.getDeployTransaction();
-    if (typeof deploymentTx.data !== 'string')
+    if (typeof deploymentTx.data !== 'string') {
       throw Error('unsigned tx data as bytes not supported');
+    }
+    const prefix = isTron ? '0x41' : '0xff';
     return getAddress(
       '0x' +
         solidityKeccak256(
           ['bytes'],
           [
-            `0xff${create2DeployerAddress.slice(2)}${salt.slice(
+            `${prefix}${create2DeployerAddress.slice(2)}${salt.slice(
               2
             )}${solidityKeccak256(['bytes'], [deploymentTx.data]).slice(2)}`,
           ]
@@ -145,7 +150,8 @@ export class DeploymentFactory {
       );
     return await this.calculateEvmCreate2Address(
       create2DeployerAddress,
-      create2Salt
+      create2Salt,
+      this.isTron
     );
   }
 
