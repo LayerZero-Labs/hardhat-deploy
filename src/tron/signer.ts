@@ -37,15 +37,13 @@ export class TronSigner extends Wallet {
   ): Promise<any> {
     switch (transaction.method) {
       case TronTxMethods.CREATE:
-        return this.handleCreate(transaction);
+        return this.create(transaction);
       default:
         return super.sendTransaction(transaction);
     }
   }
 
-  async handleCreate(
-    transaction: CreateSmartContract
-  ): Promise<TransactionResponse> {
+  async create(transaction: CreateSmartContract): Promise<TransactionResponse> {
     delete transaction.method;
     delete transaction.data;
 
@@ -114,6 +112,8 @@ export class TronSigner extends Wallet {
       return cached.value;
     }
     const MAX_ENERGY_FACTOR = 1.2;
+    // if the contract does not exist yet, aka it is create tx, return max
+    if (contract_address == '') return MAX_ENERGY_FACTOR;
     const res = await this.tronweb.fullNode.request(
       'wallet/getcontractinfo',
       {value: contract_address, visible: false},
