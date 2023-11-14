@@ -14,6 +14,8 @@ import {HDNode} from 'ethers/lib/utils';
 export class TronWeb3Provider extends Web3Provider {
   protected signer = new Map<string, TronSigner>();
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
+  private readonly fullHost: string;
+  private readonly headers: Record<string, string>;
 
   constructor(
     provider: ExternalProvider | JsonRpcFetchFunc,
@@ -25,6 +27,8 @@ export class TronWeb3Provider extends Web3Provider {
     let fullHost = url;
     // the address of the tron node has the jsonrpc path chopped off
     fullHost = fullHost.replace(/\/jsonrpc\/?$/, '');
+    this.fullHost = fullHost;
+    this.headers = httpHeaders;
     // instantiate Tron Signer
     if (Array.isArray(accounts)) {
       for (const pk of accounts) {
@@ -49,6 +53,15 @@ export class TronWeb3Provider extends Web3Provider {
       );
     }
   }
+
+  addSigner(pk: string): TronSigner {
+    const addr = new Wallet(pk).address;
+    if (this.signer.has(addr)) return this.signer.get(addr)!;
+    const signer = new TronSigner(this.fullHost, this.headers, pk, this);
+    this.signer.set(addr, signer);
+    return signer;
+  }
+
   override async getTransactionCount(): Promise<number> {
     console.log(
       'getTransactionCount is not available in in the Tron protocol, returning dummy value 1 ...'
