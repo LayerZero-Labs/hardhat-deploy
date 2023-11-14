@@ -1011,15 +1011,16 @@ declare module 'tronweb/interfaces' {
   }
 
   export interface ContractExecutionParams {
-    feeLimit: number;
-    callValue: number;
+    feeLimit?: number;
+    callValue?: number;
     tokenId?: string;
     tokenValue?: number;
-    userFeePercentage: number;
-    originEnergyLimit: number;
+    userFeePercentage?: number;
+    originEnergyLimit?: number;
     abi: string;
     bytecode: string;
-    parameters?: string;
+    parameters?: string[];
+    rawParameter?: string;
     name: string;
     permissionId?: number;
   }
