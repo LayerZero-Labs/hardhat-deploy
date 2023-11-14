@@ -7,11 +7,12 @@ import {
 } from '@ethersproject/providers';
 import {HttpNetworkConfig} from 'hardhat/types';
 import {TronSigner} from './signer';
-import {BigNumber} from 'ethers';
+import {BigNumber, Wallet} from 'ethers';
 import {Time} from './utils';
+import {HDNode} from 'ethers/lib/utils';
 
 export class TronWeb3Provider extends Web3Provider {
-  protected signer: TronSigner;
+  protected signer = new Map<string, TronSigner>();
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
 
   constructor(
@@ -20,15 +21,33 @@ export class TronWeb3Provider extends Web3Provider {
     network?: Networkish | undefined
   ) {
     super(provider, network);
-    let fullHost = config.url;
+    const {httpHeaders, url, accounts} = config;
+    let fullHost = url;
     // the address of the tron node has the jsonrpc path chopped off
     fullHost = fullHost.replace(/\/jsonrpc\/?$/, '');
-    this.signer = new TronSigner(
-      fullHost,
-      config.httpHeaders,
-      (config.accounts as any)[0],
-      this
-    );
+    // instantiate Tron Signer
+    if (Array.isArray(accounts)) {
+      for (const pk of accounts) {
+        const addr = new Wallet(pk).address;
+        this.signer.set(addr, new TronSigner(fullHost, httpHeaders, pk, this));
+      }
+    } else if (typeof accounts !== 'string' && 'mnemonic' in accounts) {
+      const hdNode = HDNode.fromMnemonic(
+        accounts.mnemonic,
+        accounts.passphrase
+      );
+      const derivedNode = hdNode.derivePath(
+        `${accounts.path}/${accounts.initialIndex}`
+      );
+      this.signer.set(
+        derivedNode.address,
+        new TronSigner(fullHost, httpHeaders, derivedNode.privateKey, this)
+      );
+    } else {
+      throw new Error(
+        'unable to instantiate Tron Signer, unrecognized private key'
+      );
+    }
   }
   override async getTransactionCount(): Promise<number> {
     console.log(
@@ -38,10 +57,9 @@ export class TronWeb3Provider extends Web3Provider {
   }
 
   override getSigner(address: string): JsonRpcSigner {
-    if (address && this.signer.address != address) {
-      throw new Error('signer instance does not match the address');
-    }
-    return this.signer as any;
+    const signer = this.signer.get(address);
+    if (!signer) throw new Error('No Tron signer exists for this address');
+    return signer as any;
   }
 
   // cache the gasPrice with a 15sec TTL
