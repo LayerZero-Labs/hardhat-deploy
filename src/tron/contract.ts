@@ -1,7 +1,5 @@
 import {TronSigner} from './signer';
 import {Contract, ContractFactory, ContractInterface, ethers} from 'ethers';
-import {Artifact} from 'hardhat/types';
-import {ExtendedArtifact} from '../../types';
 import {TransactionRequest} from '@ethersproject/providers';
 import {CreateSmartContract, TronTxMethods} from './types';
 export {Contract} from 'ethers';
@@ -9,16 +7,14 @@ export {Contract} from 'ethers';
 export class TronContractFactory extends ContractFactory {
   public default_originEnergyLimit = 1e7;
   public abi: any;
-  public readonly contractName: string;
 
   constructor(
     abi: ContractInterface,
     bytecode: ethers.BytesLike,
     signer: TronSigner,
-    artifact: Artifact | ExtendedArtifact
+    public readonly contractName = ''
   ) {
     super(abi, bytecode, signer);
-    this.contractName = (artifact as any).contractName ?? '';
     this.abi = abi;
   }
 
@@ -46,7 +42,7 @@ export class TronContractFactory extends ContractFactory {
       bytecode: this.bytecode.slice(2),
       rawParameter: params.slice(2),
       name: this.contractName,
-      data: data?.toString().slice(2) ?? '',
+      data: data?.toString() ?? '',
       method: TronTxMethods.CREATE,
     };
     return tx;

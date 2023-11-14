@@ -70,7 +70,7 @@ export class TronSigner extends Wallet {
     }
     // must wait a bit here for the jsonrpc node to be aware of the tx
     console.log(
-      'Contract deployed, waiting to retrieve transaction response...'
+      '\nContract deployed, waiting to retrieve transaction response...'
     );
     await Time.sleep(5 * Time.SECOND);
     const txRes = await this.provider.getTransaction('0x' + response.txid);
@@ -90,7 +90,7 @@ export class TronSigner extends Wallet {
     // Tight FeeLimit of contract transaction = estimated basic energy consumption * (1 + energy_factor) * EnergyPrice
     // Loose FeeLimit of contract transaction = estimated basic energy consumption * (1 + max_energy_factor) * EnergyPrice
     const contract_address = unsignedTx.to ?? '';
-    const data = '0x' + unsignedTx.data;
+    const data = unsignedTx.data;
     const MAX_FEE_LIMIT = this.tronweb.feeLimit;
     const energy_factor = await this.getEnergyFactor(contract_address);
     const gasLimit =
