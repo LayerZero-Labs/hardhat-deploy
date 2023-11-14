@@ -186,6 +186,7 @@ function createNetworkFromConfig(
     live: config.live,
     saveDeployments: config.saveDeployments,
     zksync: config.zksync,
+    tron: config.tron,
     tags,
     deploy: config.deploy || env.config.paths.deploy,
     companionNetworks: {},
@@ -222,6 +223,10 @@ function networkFromConfig(
 
   if (network.config.zksync !== undefined) {
     network.zksync = network.config.zksync;
+  }
+
+  if (network.config.tron !== undefined) {
+    network.tron = network.config.tron;
   }
 
   // associate tags to current network as object
