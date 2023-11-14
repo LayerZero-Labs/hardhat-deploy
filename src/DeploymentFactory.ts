@@ -9,11 +9,16 @@ import {Address, ExtendedArtifact} from '../types';
 import {getAddress} from '@ethersproject/address';
 import {keccak256 as solidityKeccak256} from '@ethersproject/solidity';
 import {hexConcat} from '@ethersproject/bytes';
+import {TronContractFactory} from './tron/contract';
+import {TronSigner} from './tron/signer';
+import {TronWebGetTransactionError} from './tron/utils';
+import {CreateSmartContract} from './tron/types';
 
 export class DeploymentFactory {
   private factory: ContractFactory;
   private artifact: Artifact | ExtendedArtifact;
   private isZkSync: boolean;
+  private isTron: boolean;
   private getArtifact: (name: string) => Promise<Artifact>;
   private overrides: PayableOverrides;
   private args: any[];
@@ -28,12 +33,22 @@ export class DeploymentFactory {
     this.overrides = overrides;
     this.getArtifact = getArtifact;
     this.isZkSync = network.zksync;
+    this.isTron = network.tron;
     this.artifact = artifact;
     if (this.isZkSync) {
       this.factory = new zk.ContractFactory(
         artifact.abi,
         artifact.bytecode,
         ethersSigner as zk.Signer
+      );
+    } else if (this.isTron) {
+      let contractName = '';
+      if ('contractName' in artifact) ({contractName} = artifact);
+      this.factory = new TronContractFactory(
+        artifact.abi,
+        artifact.bytecode,
+        ethersSigner as TronSigner,
+        contractName
       );
     } else {
       this.factory = new ContractFactory(
@@ -147,6 +162,17 @@ export class DeploymentFactory {
       const newFlattened = hexConcat(factoryDeps);
 
       return deserialize.data !== newData || desFlattened != newFlattened;
+    } else if (this.isTron) {
+      const tronDeployTx = newTransaction as CreateSmartContract;
+      const res = await (
+        this.factory.signer as TronSigner
+      ).tronweb.trx.getTransaction(transaction.hash);
+      // Tronweb sometimes throws error, sometimes doesn't :-/ so let's check
+      if ('Error' in res) throw new TronWebGetTransactionError(res);
+      const contract = res.raw_data.contract[0];
+      const deployed_bytecode = contract.parameter.value.new_contract?.bytecode;
+      const newBytecode = tronDeployTx.bytecode + tronDeployTx.rawParameter;
+      return deployed_bytecode !== newBytecode;
     } else {
       return transaction.data !== newData;
     }
