@@ -11,7 +11,6 @@ import {keccak256 as solidityKeccak256} from '@ethersproject/solidity';
 import {hexConcat} from '@ethersproject/bytes';
 import {TronContractFactory} from './tron/contract';
 import {TronSigner} from './tron/signer';
-import {TronWebGetTransactionError} from './tron/utils';
 import {CreateSmartContract} from './tron/types';
 
 export class DeploymentFactory {
@@ -166,9 +165,7 @@ export class DeploymentFactory {
       const tronDeployTx = newTransaction as CreateSmartContract;
       const res = await (
         this.factory.signer as TronSigner
-      ).tronweb.trx.getTransaction(transaction.hash);
-      // Tronweb sometimes throws error, sometimes doesn't :-/ so let's check
-      if ('Error' in res) throw new TronWebGetTransactionError(res);
+      ).getTronWebTransaction(transaction.hash);
       const contract = res.raw_data.contract[0];
       const deployed_bytecode = contract.parameter.value.new_contract?.bytecode;
       const newBytecode = tronDeployTx.bytecode + tronDeployTx.rawParameter;
