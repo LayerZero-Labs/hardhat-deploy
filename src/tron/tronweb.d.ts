@@ -1,5 +1,5 @@
 /**
- * Types and interfaces below are based on @daochild/tronweb-typescript
+ * Types and interfaces below are based on @daochild/tronweb-typescript@1.1.0
  * Original Source: https://github.com/daochild/tronweb-typescript
  */
 declare module 'tronweb' {
@@ -1017,7 +1017,8 @@ declare module 'tronweb/interfaces' {
     tokenValue?: number;
     userFeePercentage?: number;
     originEnergyLimit?: number;
-    abi: string;
+    // contrary to Tron docs abi doesn't just accept strings
+    abi: string | JsonFragment[] | Record<string, any>[];
     bytecode: string;
     parameters?: string[];
     rawParameter?: string;
