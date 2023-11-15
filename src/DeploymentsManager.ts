@@ -599,9 +599,14 @@ export class DeploymentsManager {
     return info?.deployer || '0x3fab184622dc19b6109349b94811493bf2a45362';
   }
 
-  public async getDeterministicDeploymentFactoryFunding(): Promise<BigNumber> {
+  public async getDeterministicDeploymentFactoryFunding(
+    isTron?: any
+  ): Promise<BigNumber> {
     const info = await this.getDeterminisityDeploymentInfo();
-    return BigNumber.from(info?.funding || '10000000000000000');
+    // TODO check sensible default for Tron
+    // accounting for the fact that TRX has 6 decimal places instead of 18
+    const funding_default = isTron ? '100000' : '10000000000000000';
+    return BigNumber.from(info?.funding || funding_default);
   }
 
   public async getDeterministicDeploymentFactoryDeploymentTx(): Promise<string> {
@@ -1047,7 +1052,11 @@ export class DeploymentsManager {
         if (externalContracts.deploy) {
           this.db.onlyArtifacts = externalContracts.artifacts;
           try {
-            await this.executeDeployScripts([externalContracts.deploy], tags, options.tagsRequireAll);
+            await this.executeDeployScripts(
+              [externalContracts.deploy],
+              tags,
+              options.tagsRequireAll
+            );
           } finally {
             this.db.onlyArtifacts = undefined;
           }
@@ -1067,7 +1076,7 @@ export class DeploymentsManager {
   public async executeDeployScripts(
     deployScriptsPaths: string[],
     tags: string[] = [],
-    tagsRequireAll = false,
+    tagsRequireAll = false
   ): Promise<void> {
     const wasWrittingToFiles = this.db.writeDeploymentsToFiles;
     // TODO loop over companion networks ?
@@ -1127,8 +1136,11 @@ export class DeploymentsManager {
         bag.push(scriptFilePath);
       }
       // console.log("tags found " + scriptFilePath, scriptTags);
-      if (tagsRequireAll && tags.every(tag => scriptTags.includes(tag))
-        || !tagsRequireAll && (tags.length == 0 || tags.some(tag => scriptTags.includes(tag)))) {
+      if (
+        (tagsRequireAll && tags.every((tag) => scriptTags.includes(tag))) ||
+        (!tagsRequireAll &&
+          (tags.length == 0 || tags.some((tag) => scriptTags.includes(tag))))
+      ) {
         scriptFilePaths.push(scriptFilePath);
       }
     }
