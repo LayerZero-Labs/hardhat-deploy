@@ -48,3 +48,13 @@ export const Time = {
     return new Promise<void>((res) => setTimeout(res, ms));
   },
 } as const;
+
+export const ensure0x = (str: string): string => {
+  if (str.startsWith('0x')) return str;
+  return '0x' + str;
+};
+
+export const strip0x = (str: string): string => {
+  if (str.startsWith('0x')) return str.slice(2);
+  return str;
+};

@@ -2,6 +2,7 @@ import {TronSigner} from './signer';
 import {Contract, ContractFactory, ContractInterface, ethers} from 'ethers';
 import {TransactionRequest} from '@ethersproject/providers';
 import {CreateSmartContract, TronTxMethods} from './types';
+import {strip0x} from './utils';
 export {Contract} from 'ethers';
 
 export class TronContractFactory extends ContractFactory {
@@ -39,8 +40,8 @@ export class TronContractFactory extends ContractFactory {
       userFeePercentage: 100,
       originEnergyLimit: this.default_originEnergyLimit,
       abi: this.abi,
-      bytecode: this.bytecode.slice(2),
-      rawParameter: params.slice(2),
+      bytecode: strip0x(this.bytecode),
+      rawParameter: strip0x(params),
       name: this.contractName,
       data: data?.toString() ?? '',
       method: TronTxMethods.CREATE,
