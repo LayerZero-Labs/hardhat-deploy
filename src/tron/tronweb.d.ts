@@ -221,8 +221,8 @@ declare module 'tronweb' {
       to: string,
       amount: number,
       from: string,
-      options: number
-    ): Promise<Transaction | Record<string, unknown>>;
+      options?: number
+    ): Promise<Transaction>;
     tradeExchangeTokens(
       exchangeID: number,
       tokenID: string,
@@ -426,7 +426,7 @@ declare module 'tronweb' {
       offset?: number
     ): Promise<TokenInfo[] | Record<string, unknown>[]>;
     sendRawTransaction(
-      signedTransaction: JSON | Record<string, unknown>,
+      signedTransaction: JSON | Record<string, unknown> | Transaction,
       options?: any
     ): Promise<RawTransactionResult | TronWebError1>;
     sendHexTransaction(
@@ -445,9 +445,9 @@ declare module 'tronweb' {
       pk?: string
     ): Promise<TransactionResult | Record<string, unknown>>;
     sign(
-      transaction: Record<string, unknown>,
+      transaction: Record<string, unknown> | Transaction,
       privateKey?: string
-    ): Promise<Record<string, unknown>>;
+    ): Promise<Transaction>;
     sign(str: string, privateKey: string): Promise<string>;
     signMessageV2(msg: string | BytesLike, privateKey: string): Promise<string>;
     timeUntilNextVoteCycle(): Promise<number>;
