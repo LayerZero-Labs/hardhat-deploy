@@ -7,7 +7,7 @@ import {BigNumber, Wallet} from 'ethers';
 import {hexlify} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
-import {Time, TronWebGetTransactionError} from './utils';
+import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
 import {CreateSmartContract, TronTxMethods} from './types';
 import {TronWebError} from './utils';
 import {BlockTransaction, TronWebError1} from 'tronweb/interfaces';
@@ -28,7 +28,7 @@ export class TronSigner extends Wallet {
     this.tronweb = new TronWeb({
       fullHost,
       headers,
-      privateKey: privateKey.slice(2),
+      privateKey: strip0x(privateKey),
     });
   }
 
@@ -64,9 +64,17 @@ export class TronSigner extends Wallet {
       '\nContract deployed, waiting to retrieve transaction response...'
     );
     await Time.sleep(5 * Time.SECOND);
-    const txRes = await this.provider.getTransaction('0x' + response.txid);
-    txRes.wait = async function (this: TronSigner) {
-      return this.provider.getTransactionReceipt('0x' + response.txid);
+    const txRes = await this.provider.getTransaction(ensure0x(response.txid));
+    txRes.wait = async function (this: TronSigner, confirmations?: number) {
+      let curr_conf = txRes.confirmations;
+      while (confirmations && curr_conf < confirmations) {
+        await Time.sleep(Time.SECOND);
+        const {confirmations: latest_conf} = await this.provider.getTransaction(
+          ensure0x(response.txid)
+        );
+        curr_conf = latest_conf;
+      }
+      return this.provider.getTransactionReceipt(ensure0x(response.txid));
     }.bind(this);
     return txRes;
   }
