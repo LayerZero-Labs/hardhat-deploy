@@ -10,7 +10,7 @@ import {TronWeb3Provider} from './provider';
 import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
 import {CreateSmartContract, TronTxMethods} from './types';
 import {TronWebError} from './utils';
-import {BlockTransaction, TronWebError1} from 'tronweb/interfaces';
+import {BlockTransaction, Transaction, TronWebError1} from 'tronweb/interfaces';
 import {TransactionResponse} from '@ethersproject/providers';
 
 export class TronSigner extends Wallet {
@@ -30,6 +30,13 @@ export class TronSigner extends Wallet {
       headers,
       privateKey: strip0x(privateKey),
     });
+  }
+
+  async sign(
+    unsignedTx: Record<string, unknown> | Transaction,
+    privateKey?: string
+  ): Promise<Transaction> {
+    return this.tronweb.trx.sign(unsignedTx, privateKey);
   }
 
   override async sendTransaction(
@@ -53,7 +60,7 @@ export class TronSigner extends Wallet {
         this.tronweb.address.toHex(this.address)
       );
 
-    const signedTx = await this.tronweb.trx.sign(unsignedTx);
+    const signedTx = await this.sign(unsignedTx);
 
     const response = await this.tronweb.trx.sendRawTransaction(signedTx);
     if (!('result' in response) || !response.result) {
@@ -65,17 +72,10 @@ export class TronSigner extends Wallet {
     );
     await Time.sleep(5 * Time.SECOND);
     const txRes = await this.provider.getTransaction(ensure0x(response.txid));
-    txRes.wait = async function (this: TronSigner, confirmations?: number) {
-      let curr_conf = txRes.confirmations;
-      while (confirmations && curr_conf < confirmations) {
-        await Time.sleep(Time.SECOND);
-        const {confirmations: latest_conf} = await this.provider.getTransaction(
-          ensure0x(response.txid)
-        );
-        curr_conf = latest_conf;
-      }
-      return this.provider.getTransactionReceipt(ensure0x(response.txid));
-    }.bind(this);
+    txRes.wait = (this.provider as TronWeb3Provider)._buildWait(
+      txRes.confirmations,
+      response.txid
+    );
     return txRes;
   }
 
