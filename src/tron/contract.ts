@@ -42,7 +42,7 @@ export class TronContractFactory extends ContractFactory {
       abi: this.abi,
       bytecode: strip0x(this.bytecode),
       rawParameter: strip0x(params),
-      name: this.contractName,
+      name: this.contractName.slice(0, 32), //contractName's length cannot be greater than 32
       data: data?.toString() ?? '',
       method: TronTxMethods.CREATE,
     };
