@@ -43,6 +43,7 @@
     "@types/node": "^16.6.2",
     "@typescript-eslint/eslint-plugin": "^4.29.2",
     "@typescript-eslint/parser": "^4.29.2",
+    "bignumber.js": "^9.1.2",
     "chai": "^4.2.0",
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
@@ -81,6 +82,7 @@
     "match-all": "^1.2.6",
     "murmur-128": "^0.2.1",
     "qs": "^6.9.4",
+    "tronweb": "^5.3.1",
     "zksync-web3": "^0.14.3"
   },
   "scripts": {
