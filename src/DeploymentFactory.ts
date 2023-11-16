@@ -26,7 +26,7 @@ export class DeploymentFactory {
     artifact: Artifact | ExtendedArtifact,
     args: any[],
     network: any,
-    ethersSigner?: Signer | zk.Signer,
+    ethersSigner?: Signer | zk.Signer | TronSigner,
     overrides: PayableOverrides = {}
   ) {
     this.overrides = overrides;

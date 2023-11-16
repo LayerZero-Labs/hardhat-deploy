@@ -1646,11 +1646,11 @@ Note that in this case, the contract deployment will not behave the same if depl
 
   async function getFrom(from: string): Promise<{
     address: Address;
-    ethersSigner: Signer | zk.Signer;
+    ethersSigner: Signer | zk.Signer | TronSigner;
     hardwareWallet?: string;
     unknown: boolean;
   }> {
-    let ethersSigner: Signer | zk.Signer | undefined;
+    let ethersSigner: Signer | zk.Signer | TronSigner | undefined;
     let wallet: Wallet | zk.Wallet | TronSigner | undefined;
     let hardwareWallet: string | undefined = undefined;
     let unknown = false;

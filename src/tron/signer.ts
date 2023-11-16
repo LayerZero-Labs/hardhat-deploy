@@ -4,14 +4,17 @@
  */
 
 import {BigNumber, Wallet} from 'ethers';
-import {hexlify} from 'ethers/lib/utils';
+import {Deferrable, hexlify} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
 import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
 import {CreateSmartContract, TronTxMethods} from './types';
 import {TronWebError} from './utils';
 import {BlockTransaction, Transaction, TronWebError1} from 'tronweb/interfaces';
-import {TransactionResponse} from '@ethersproject/providers';
+import {
+  TransactionRequest,
+  TransactionResponse,
+} from '@ethersproject/providers';
 
 export class TronSigner extends Wallet {
   protected tronweb: TronWeb;
@@ -40,13 +43,14 @@ export class TronSigner extends Wallet {
   }
 
   override async sendTransaction(
-    transaction: CreateSmartContract
-  ): Promise<any> {
+    transaction: CreateSmartContract | Deferrable<TransactionRequest>
+  ): Promise<TransactionResponse> {
+    if (!('method' in transaction)) return super.sendTransaction(transaction);
     switch (transaction.method) {
       case TronTxMethods.CREATE:
-        return this.create(transaction);
+        return this.create(transaction as CreateSmartContract);
       default:
-        return super.sendTransaction(transaction);
+        throw new Error('sendTransaction method not implemented');
     }
   }
 

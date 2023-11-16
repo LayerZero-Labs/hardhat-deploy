@@ -76,10 +76,12 @@ export class TronWeb3Provider extends Web3Provider {
     return 1;
   }
 
-  override getSigner(address: string): JsonRpcSigner {
+  override getSigner<T extends TronSigner | JsonRpcSigner = JsonRpcSigner>(
+    address: string
+  ): T {
     const signer = this.signer.get(address);
     if (!signer) throw new Error('No Tron signer exists for this address');
-    return signer as any;
+    return signer as T;
   }
 
   // cache the gasPrice with a 15sec TTL
@@ -124,8 +126,7 @@ export class TronWeb3Provider extends Web3Provider {
       Math.floor(value.toNumber()),
       this.ro_tronweb.address.toHex(from)
     );
-    const signer = this.getSigner(from);
-    const signedTx = await (signer as unknown as TronSigner).sign(unsignedTx);
+    const signedTx = await this.getSigner<TronSigner>(from).sign(unsignedTx);
     const response = await this.ro_tronweb.trx.sendRawTransaction(signedTx);
     if (!('result' in response) || !response.result) {
       throw new TronWebError(response as TronWebError1);
