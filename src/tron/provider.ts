@@ -76,7 +76,7 @@ export class TronWeb3Provider extends Web3Provider {
 
   override async getTransactionCount(): Promise<number> {
     console.log(
-      'getTransactionCount is not available in in the Tron protocol, returning dummy value 1 ...'
+      'getTransactionCount is not available in the Tron protocol, returning dummy value 1 ...'
     );
     return 1;
   }
