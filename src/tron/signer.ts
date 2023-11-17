@@ -147,7 +147,7 @@ export class TronSigner extends Wallet {
    *
    * The FeeLimit is computed based on the estimated basic energy consumption,
    * the energy factor (or max energy factor) of the contract, and the current energy price.
-   * This calculation considers both the tight and loose FeeLimit scenarios.
+   * In any case the feeLimit is capped at the value of MAX_FEE_LIMIT
    *
    * Calculation Formulas:
    * - Tight FeeLimit = Basic Energy Consumption * (1 + Energy Factor) * Energy Price
