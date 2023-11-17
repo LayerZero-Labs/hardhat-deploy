@@ -159,12 +159,12 @@ export class TronSigner extends Wallet {
    *
    * @param {Record<string, any>} unsignedTx - The unsigned transaction object.
    * @param {Record<string, any>} [overrides] - Optional overrides, such as gasLimit.
-   * @returns {Promise<string>} The calculated FeeLimit as a hexadecimal string.
+   * @returns {Promise<number>} The calculated FeeLimit as a number.
    */
   async getFeeLimit(
     unsignedTx: Record<string, any>,
     overrides?: Record<string, any>
-  ): Promise<string> {
+  ): Promise<number> {
     const contract_address = unsignedTx.to ?? '';
     const data = unsignedTx.data;
     const factor = 1 + (await this.getEnergyFactor(contract_address));
@@ -181,14 +181,14 @@ export class TronSigner extends Wallet {
       );
     }
     const enegyPrice = await this.getEnergyPrice();
-    let feeLimit = energy_consumption
+    const feeLimit = energy_consumption
       .mul(enegyPrice)
       .mul(factor_adj)
       .div(this.MAX_ENERGY_DIVISOR);
     if (feeLimit.gt(BigNumber.from(this.MAX_FEE_LIMIT))) {
-      feeLimit = BigNumber.from(this.MAX_FEE_LIMIT);
+      return this.MAX_FEE_LIMIT;
     }
-    return hexlify(feeLimit);
+    return feeLimit.toNumber();
   }
 
   /**

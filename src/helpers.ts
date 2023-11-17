@@ -584,7 +584,7 @@ export function addHelpers(
         unsignedTx,
         overrides
       );
-      (unsignedTx as CreateSmartContract).feeLimit = Number(feeLimit);
+      (unsignedTx as CreateSmartContract).feeLimit = feeLimit;
     } else {
       await overrideGasLimit(unsignedTx, options, (newOverrides) =>
         ethersSigner.estimateGas(newOverrides)
