@@ -29,6 +29,7 @@ import {
  * - `energyFactors`: Map to store and manage energy factors for different contracts.
  * - `MAX_ENERGY_FACTOR`: Maximum energy factor, used in calculating transaction fees.
  * - `MAX_ENERGY_DIVISOR`: A workaround divisor for handling BigNumber calculations.
+ * - `MAX_FEE_LIMIT`: Upper bound on the fee limit allowed by the Tron network.
  *
  * @extends Wallet
  *
@@ -45,6 +46,7 @@ export class TronSigner extends Wallet {
   public MAX_ENERGY_FACTOR = 1.2;
   // we cannot directly use floats we bignumber from ethersjs so we'll have to work around by multiplying and divising
   public MAX_ENERGY_DIVISOR = 1000;
+  public MAX_FEE_LIMIT = 1000000000;
 
   constructor(
     fullHost: string,
@@ -180,10 +182,13 @@ export class TronSigner extends Wallet {
       );
     }
     const enegyPrice = await this.getEnergyPrice();
-    const feeLimit = energy_consumption
+    let feeLimit = energy_consumption
       .mul(enegyPrice)
       .mul(factor_adj)
       .div(this.MAX_ENERGY_DIVISOR);
+    if (feeLimit.gt(BigNumber.from(this.MAX_FEE_LIMIT))) {
+      feeLimit = BigNumber.from(this.MAX_FEE_LIMIT);
+    }
     return hexlify(feeLimit);
   }
 
