@@ -28,6 +28,13 @@ export class TronWebGetTransactionError extends Error {
   }
 }
 
+export class TronTransactionFailedError extends Error {
+  constructor(readonly receipt: Record<string, any>) {
+    super(`failed execution\n${JSON.stringify(receipt, null, 2)}`);
+    this.name = this.constructor.name;
+  }
+}
+
 // Base unit in milliseconds
 const MILLISECOND = 1;
 const SECOND = 1000 * MILLISECOND;

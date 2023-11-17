@@ -11,7 +11,12 @@ import {
 import {HttpNetworkConfig} from 'hardhat/types';
 import {TronSigner} from './signer';
 import {BigNumber, Wallet} from 'ethers';
-import {Time, TronWebError, ensure0x} from './utils';
+import {
+  Time,
+  TronTransactionFailedError,
+  TronWebError,
+  ensure0x,
+} from './utils';
 import {Deferrable, HDNode, parseTransaction} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWebError1} from 'tronweb/interfaces';
@@ -80,7 +85,9 @@ export class TronWeb3Provider extends Web3Provider {
     address: string
   ): T {
     const signer = this.signer.get(address);
-    if (!signer) throw new Error('No Tron signer exists for this address');
+    if (!signer) {
+      throw new Error(`No Tron signer exists for this address ${address}`);
+    }
     return signer as T;
   }
 
@@ -149,7 +156,12 @@ export class TronWeb3Provider extends Web3Provider {
         );
         curr_conf = latest_conf;
       }
-      return this.getTransactionReceipt(ensure0x(hash));
+      const receipt = await this.getTransactionReceipt(ensure0x(hash));
+      const {status} = receipt;
+      if (status === 0) {
+        throw new TronTransactionFailedError(receipt);
+      }
+      return receipt;
     };
   }
 
