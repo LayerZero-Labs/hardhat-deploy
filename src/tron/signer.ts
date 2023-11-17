@@ -20,6 +20,9 @@ export class TronSigner extends Wallet {
   protected tronweb: TronWeb;
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
   public energyFactors = new Map<string, {time: number; value: number}>();
+  public MAX_ENERGY_FACTOR = 1.2;
+  // we cannot directly use floats we bignumber from ethersjs so we'll have to work around by multiplying and divising
+  public MAX_ENERGY_DIVISOR = 1000;
 
   constructor(
     fullHost: string,
@@ -71,9 +74,7 @@ export class TronSigner extends Wallet {
       throw new TronWebError(response as TronWebError1); // in this case tronweb returs an error-like object with a message and a code
     }
     // must wait a bit here for the jsonrpc node to be aware of the tx
-    console.log(
-      '\nContract deployed, waiting to retrieve transaction response...'
-    );
+    console.log('\nTransaction broadcast, waiting for response...');
     await Time.sleep(5 * Time.SECOND);
     const txRes = await this.provider.getTransaction(ensure0x(response.txid));
     txRes.wait = (this.provider as TronWeb3Provider)._buildWait(
@@ -94,27 +95,41 @@ export class TronSigner extends Wallet {
     // Loose FeeLimit of contract transaction = estimated basic energy consumption * (1 + max_energy_factor) * EnergyPrice
     const contract_address = unsignedTx.to ?? '';
     const data = unsignedTx.data;
-    const MAX_FEE_LIMIT = this.tronweb.feeLimit;
-    const energy_factor = await this.getEnergyFactor(contract_address);
-    const gasLimit =
-      overrides?.gasLimit ?? (await this.getGasLimit(contract_address, data));
-    const enegyPrice = Number(await this.getGasPrice());
-    const factor = 1 + energy_factor;
-    const feeLimit = Number(gasLimit) * factor * enegyPrice;
-    const adjusted = Math.floor(Math.min(feeLimit, MAX_FEE_LIMIT));
-    return hexlify(adjusted);
+    const factor = 1 + (await this.getEnergyFactor(contract_address));
+    const factor_adj = BigNumber.from(
+      Math.floor(factor * this.MAX_ENERGY_DIVISOR)
+    );
+    let energy_consumption: BigNumber;
+    if (overrides?.gasLimit) {
+      energy_consumption = BigNumber.from(overrides?.gasLimit.toString());
+    } else {
+      energy_consumption = await this.getEnergyConsumption(
+        contract_address,
+        data
+      );
+    }
+    const enegyPrice = await this.getEnergyPrice();
+    const feeLimit = energy_consumption
+      .mul(enegyPrice)
+      .mul(factor_adj)
+      .div(this.MAX_ENERGY_DIVISOR);
+    return hexlify(feeLimit);
   }
 
+  getEnergyPrice = (): Promise<BigNumber> => this.getGasPrice();
   override async getGasPrice(): Promise<BigNumber> {
     return this.provider.getGasPrice();
   }
 
-  async getGasLimit(contract_address: string, data: string): Promise<string> {
+  async getEnergyConsumption(
+    contract_address: string,
+    data: string
+  ): Promise<BigNumber> {
     const gasLimit = await this.estimateGas({
       to: contract_address, // need to slice off the "41" prefix that Tron appends to addresses
       data,
     });
-    return gasLimit.toString();
+    return gasLimit;
   }
 
   //cache the energy_factor with a 10min TTL, energy factors should be updated by Tron every 6h
@@ -123,16 +138,19 @@ export class TronSigner extends Wallet {
     if (cached && cached.time > Time.NOW - 10 * Time.MINUTE) {
       return cached.value;
     }
-    const MAX_ENERGY_FACTOR = 1.2;
+    let energy_factor = this.MAX_ENERGY_FACTOR;
     // if the contract does not exist yet, aka it is create tx, return max
-    if (contract_address == '') return MAX_ENERGY_FACTOR;
+    if (contract_address == '') return energy_factor;
     const res = await this.tronweb.fullNode.request(
       'wallet/getcontractinfo',
       {value: contract_address, visible: false},
       'post'
     );
-    const energy_factor =
-      res?.contract_state?.energy_factor ?? MAX_ENERGY_FACTOR;
+
+    // check it's a sensible value
+    if (res?.contract_state?.energy_factor < this.MAX_ENERGY_FACTOR) {
+      energy_factor = Number(res?.contract_state?.energy_factor);
+    }
     this.energyFactors.set(contract_address, {
       time: Time.NOW,
       value: energy_factor,
