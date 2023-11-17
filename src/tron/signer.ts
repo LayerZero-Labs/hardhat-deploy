@@ -74,7 +74,7 @@ export class TronSigner extends Wallet {
       throw new TronWebError(response as TronWebError1); // in this case tronweb returs an error-like object with a message and a code
     }
     // must wait a bit here for the jsonrpc node to be aware of the tx
-    console.log('\nTransaction broadcast, waiting for response...');
+    console.log(' transaction broadcast, waiting for response...');
     await Time.sleep(5 * Time.SECOND);
     const txRes = await this.provider.getTransaction(ensure0x(response.txid));
     txRes.wait = (this.provider as TronWeb3Provider)._buildWait(
@@ -84,15 +84,34 @@ export class TronSigner extends Wallet {
     return txRes;
   }
 
+  /**
+   * Calculates the FeeLimit for a TRON contract transaction.
+   *
+   * The FeeLimit is computed based on the estimated basic energy consumption,
+   * the energy factor (or max energy factor) of the contract, and the current energy price.
+   * This calculation considers both the tight and loose FeeLimit scenarios.
+   *
+   * Calculation Formulas:
+   * - Tight FeeLimit = Basic Energy Consumption * (1 + Energy Factor) * Energy Price
+   * - Loose FeeLimit = Basic Energy Consumption * (1 + Max Energy Factor) * Energy Price
+   *
+   * References:
+   * - [Determining the FeeLimit](https://developers.tron.network/docs/set-feelimit#how-to-determine-the-feelimit-parameter)
+   * - [Contract Energy Factor](https://developers.tron.network/reference/getcontractinfo)
+   * - [Dynamic Energy Model](https://developers.tron.network/docs/resource-model#dynamic-energy-model)
+   *
+   * @param {Record<string, any>} unsignedTx - The unsigned transaction object.
+   * @param {Record<string, any>} [overrides] - Optional overrides, such as gasLimit.
+   * @returns {Promise<string>} The calculated FeeLimit as a hexadecimal string.
+   *
+   * @example
+   * const feeLimit = await getFeeLimit(unsignedTx, { gasLimit: '1000000' });
+   * console.log(feeLimit);
+   */
   async getFeeLimit(
     unsignedTx: Record<string, any>,
     overrides?: Record<string, any>
   ): Promise<string> {
-    // https://developers.tron.network/docs/set-feelimit#how-to-determine-the-feelimit-parameter
-    // https://developers.tron.network/reference/getcontractinfo, get energy_factor
-    // https://developers.tron.network/docs/resource-model#dynamic-energy-model, max factor
-    // Tight FeeLimit of contract transaction = estimated basic energy consumption * (1 + energy_factor) * EnergyPrice
-    // Loose FeeLimit of contract transaction = estimated basic energy consumption * (1 + max_energy_factor) * EnergyPrice
     const contract_address = unsignedTx.to ?? '';
     const data = unsignedTx.data;
     const factor = 1 + (await this.getEnergyFactor(contract_address));
