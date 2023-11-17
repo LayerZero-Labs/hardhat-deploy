@@ -256,7 +256,7 @@ export class TronWeb3Provider extends Web3Provider {
   /**
    * Estimates the gas required for a transaction on the TRON network.
    *
-   * This method overrides the `estimateGas` method to accommodate TRON's specific requirements.
+   * This method overrides the `estimateGas` method to accommodate TRON's [specific requirements](https://developers.tron.network/reference/eth_estimategas).
    * TRON does not support EIP-1559 transactions and nonces, so related fields are removed from the transaction object.
    * It then calls the superclass's `estimateGas` method for the actual estimation.
    *
@@ -266,8 +266,6 @@ export class TronWeb3Provider extends Web3Provider {
   override async estimateGas(
     transaction: Deferrable<TransactionRequest>
   ): Promise<BigNumber> {
-    // tron does not support eip1559 tx and doesn't support nonces either
-    // https://developers.tron.network/reference/eth_estimategas
     const toDel = ['type', 'maxFeePerGas', 'maxPriorityFeePerGas', 'nonce'];
     for (const field of toDel) {
       delete (transaction as {[key: string]: any})[field];

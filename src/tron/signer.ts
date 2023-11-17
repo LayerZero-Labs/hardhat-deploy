@@ -44,7 +44,6 @@ export class TronSigner extends Wallet {
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
   public energyFactors = new Map<string, {time: number; value: number}>();
   public MAX_ENERGY_FACTOR = 1.2;
-  // we cannot directly use floats we bignumber from ethersjs so we'll have to work around by multiplying and divising
   public MAX_ENERGY_DIVISOR = 1000;
   public MAX_FEE_LIMIT = 1000000000;
 
