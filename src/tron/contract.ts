@@ -1,7 +1,7 @@
 import {TronSigner} from './signer';
 import {Contract, ContractFactory, ContractInterface, ethers} from 'ethers';
 import {TransactionRequest} from '@ethersproject/providers';
-import {CreateSmartContract, TronTxMethods} from './types';
+import {CreateSmartContract, MethodSymbol, TronTxMethods} from './types';
 import {strip0x} from './utils';
 export {Contract} from 'ethers';
 
@@ -86,7 +86,7 @@ export class TronContractFactory extends ContractFactory {
       rawParameter: strip0x(params),
       name: this.contractName.slice(0, 32), //contractName's length cannot be greater than 32
       data: data?.toString() ?? '',
-      method: TronTxMethods.CREATE,
+      [MethodSymbol]: TronTxMethods.CREATE,
     };
     return tx;
   }

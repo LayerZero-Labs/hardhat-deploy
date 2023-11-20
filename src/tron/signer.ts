@@ -4,13 +4,18 @@
  */
 
 import {BigNumber, Wallet} from 'ethers';
-import {Deferrable, hexlify} from 'ethers/lib/utils';
+import {Deferrable} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
 import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
-import {CreateSmartContract, TronTxMethods} from './types';
+import {CreateSmartContract, MethodSymbol, TronTxMethods} from './types';
 import {TronWebError} from './utils';
-import {BlockTransaction, Transaction, TronWebError1} from 'tronweb/interfaces';
+import {
+  BlockTransaction,
+  ContractExecutionParams,
+  Transaction,
+  TronWebError1,
+} from 'tronweb/interfaces';
 import {
   TransactionRequest,
   TransactionResponse,
@@ -94,8 +99,10 @@ export class TronSigner extends Wallet {
   override async sendTransaction(
     transaction: CreateSmartContract | Deferrable<TransactionRequest>
   ): Promise<TransactionResponse> {
-    if (!('method' in transaction)) return super.sendTransaction(transaction);
-    switch (transaction.method) {
+    if (!(MethodSymbol in transaction)) {
+      return super.sendTransaction(transaction);
+    }
+    switch ((transaction as CreateSmartContract)[MethodSymbol]) {
       case TronTxMethods.CREATE:
         return this.create(transaction as CreateSmartContract);
       default:
@@ -115,8 +122,10 @@ export class TronSigner extends Wallet {
    * @returns {Promise<TransactionResponse>} A promise that resolves to the transaction response.
    * @throws {TronWebError} Throws an error if the transaction submission fails.
    */
-  async create(transaction: CreateSmartContract): Promise<TransactionResponse> {
-    delete transaction.method;
+  async create(
+    transaction: ContractExecutionParams & Partial<CreateSmartContract>
+  ): Promise<TransactionResponse> {
+    delete transaction[MethodSymbol];
     delete transaction.data;
 
     const unsignedTx =

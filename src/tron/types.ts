@@ -1,8 +1,10 @@
 import {ContractExecutionParams} from 'tronweb/interfaces';
 
+export const MethodSymbol = Symbol('method');
+
 export interface CreateSmartContract extends ContractExecutionParams {
-  data?: string;
-  method?: TronTxMethods;
+  data: string;
+  [MethodSymbol]: TronTxMethods.CREATE;
 }
 
 export enum TronTxMethods {
