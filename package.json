@@ -1,6 +1,6 @@
 {
   "name": "@layerzerolabs/hardhat-deploy",
-  "version": "0.11.43",
+  "version": "0.11.43+lz.001",
   "description": "Hardhat Plugin For Replicable Deployments And Tests",
   "repository": "github:wighawag/hardhat-deploy",
   "author": "wighawag",
@@ -97,7 +97,6 @@
     "watch": "tsc -w",
     "publish:next": "npm publish --tag next",
     "publish:release": "npm publish",
-    "prepublishOnly": "npm run build",
-    "bump":"npm version prerelease"
+    "prepublishOnly": "npm run build"   
   }
 }
