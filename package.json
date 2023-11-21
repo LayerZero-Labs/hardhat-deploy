@@ -1,12 +1,13 @@
 {
-  "name": "hardhat-deploy",
+  "name": "@layerzerolabs/hardhat-deploy",
   "version": "0.11.43",
   "description": "Hardhat Plugin For Replicable Deployments And Tests",
   "repository": "github:wighawag/hardhat-deploy",
   "author": "wighawag",
   "license": "MIT",
   "publishConfig": {
-    "access": "public"
+    "access": "restricted",
+    "preid":"lz"
   },
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -96,6 +97,7 @@
     "watch": "tsc -w",
     "publish:next": "npm publish --tag next",
     "publish:release": "npm publish",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "bump":"npm version prerelease"
   }
 }
