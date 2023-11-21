@@ -6,17 +6,13 @@ import {
   TransactionRequest,
 } from '@ethersproject/providers';
 import {getAddress} from '@ethersproject/address';
-import {
-  Contract,
-  ContractFactory,
-  PayableOverrides,
-} from '@ethersproject/contracts';
+import {Contract, PayableOverrides} from '@ethersproject/contracts';
 import * as zk from 'zksync-web3';
 import {AddressZero} from '@ethersproject/constants';
 import {BigNumber} from '@ethersproject/bignumber';
 import {Wallet} from '@ethersproject/wallet';
 import {keccak256 as solidityKeccak256} from '@ethersproject/solidity';
-import {zeroPad, hexlify, hexConcat} from '@ethersproject/bytes';
+import {zeroPad, hexlify} from '@ethersproject/bytes';
 import {Interface, FunctionFragment} from '@ethersproject/abi';
 import {
   Deployment,
@@ -55,7 +51,7 @@ import diamondERC165Init from '../extendedArtifacts/DiamondERC165Init.json';
 import diamondCutFacet from '../extendedArtifacts/DiamondCutFacet.json';
 import diamondLoupeFacet from '../extendedArtifacts/DiamondLoupeFacet.json';
 import ownershipFacet from '../extendedArtifacts/OwnershipFacet.json';
-import {Artifact, EthereumProvider, Network} from 'hardhat/types';
+import {Artifact, EthereumProvider} from 'hardhat/types';
 import {DeploymentsManager} from './DeploymentsManager';
 import enquirer from 'enquirer';
 import {
@@ -65,6 +61,9 @@ import {
 import {getDerivationPath} from './hdpath';
 import {bnReplacer} from './internal/utils';
 import {DeploymentFactory} from './DeploymentFactory';
+import {TronWeb3Provider} from './tron/provider';
+import {TronSigner} from './tron/signer';
+import {CreateSmartContract} from './tron/types';
 
 let LedgerSigner: any; // TODO type
 let TrezorSigner: any; // TODO type
@@ -277,14 +276,21 @@ export function addHelpers(
     ) => Promise<void>;
   };
 } {
-  let provider: Web3Provider | zk.Web3Provider;
+  let provider: Web3Provider | zk.Web3Provider | TronWeb3Provider;
   const availableAccounts: {[name: string]: boolean} = {};
 
-  async function init(): Promise<Web3Provider | zk.Web3Provider> {
+  async function init(): Promise<
+    Web3Provider | zk.Web3Provider | TronWeb3Provider
+  > {
     if (!provider) {
       await deploymentManager.setupAccounts();
       if (network.zksync) {
         provider = new zk.Web3Provider(fixProvider(network.provider));
+      } else if (network.tron) {
+        provider = new TronWeb3Provider(
+          fixProvider(network.provider),
+          network.config
+        );
       } else {
         provider = new Web3Provider(fixProvider(network.provider));
       }
@@ -418,7 +424,9 @@ export function addHelpers(
       const txRequest = {
         to: senderAddress,
         value: (
-          await deploymentManager.getDeterministicDeploymentFactoryFunding()
+          await deploymentManager.getDeterministicDeploymentFactoryFunding(
+            network.tron
+          )
         ).toHexString(),
         gasPrice: options.gasPrice,
         maxFeePerGas: options.maxFeePerGas,
@@ -525,7 +533,7 @@ export function addHelpers(
       options
     );
 
-    let overrides: PayableOverrides = {
+    const overrides: PayableOverrides = {
       gasLimit: options.gasLimit,
       gasPrice: options.gasPrice,
       maxFeePerGas: options.maxFeePerGas,
@@ -547,6 +555,10 @@ export function addHelpers(
 
     let create2Address;
     if (options.deterministicDeployment) {
+      // feature not ready for Tron yet
+      if (network.tron) {
+        throw new Error('deterministic deployment not yet supported on Tron');
+      }
       if (typeof unsignedTx.data === 'string') {
         const create2DeployerAddress = await ensureCreate2DeployerReady(
           options
@@ -567,18 +579,25 @@ export function addHelpers(
       }
     }
 
-    await overrideGasLimit(unsignedTx, options, (newOverrides) =>
-      ethersSigner.estimateGas(newOverrides)
-    );
-    await setupGasPrice(unsignedTx);
-    await setupNonce(from, unsignedTx);
-
-    // Temporary workaround for https://github.com/ethers-io/ethers.js/issues/2078
-    // TODO: Remove me when LedgerSigner adds proper support for 1559 txns
-    if (hardwareWallet === 'ledger') {
-      unsignedTx.type = 1;
-    } else if (hardwareWallet === 'trezor') {
-      unsignedTx.type = 1;
+    if (network.tron) {
+      const feeLimit = await (ethersSigner as TronSigner).getFeeLimit(
+        unsignedTx,
+        overrides
+      );
+      (unsignedTx as CreateSmartContract).feeLimit = feeLimit;
+    } else {
+      await overrideGasLimit(unsignedTx, options, (newOverrides) =>
+        ethersSigner.estimateGas(newOverrides)
+      );
+      await setupGasPrice(unsignedTx);
+      await setupNonce(from, unsignedTx);
+      // Temporary workaround for https://github.com/ethers-io/ethers.js/issues/2078
+      // TODO: Remove me when LedgerSigner adds proper support for 1559 txns
+      if (hardwareWallet === 'ledger') {
+        unsignedTx.type = 1;
+      } else if (hardwareWallet === 'trezor') {
+        unsignedTx.type = 1;
+      }
     }
 
     if (unknown) {
@@ -1493,8 +1512,8 @@ Note that in this case, the contract deployment will not behave the same if depl
           upgradeArgsTemplate = ['{implementation}', '{data}'];
         }
 
-        let proxyAddress = proxy.address;
-        let upgradeArgs = replaceTemplateArgs(upgradeArgsTemplate, {
+        const proxyAddress = proxy.address;
+        const upgradeArgs = replaceTemplateArgs(upgradeArgsTemplate, {
           implementationAddress: implementation.address,
           proxyAdmin,
           data,
@@ -1627,12 +1646,12 @@ Note that in this case, the contract deployment will not behave the same if depl
 
   async function getFrom(from: string): Promise<{
     address: Address;
-    ethersSigner: Signer | zk.Signer;
+    ethersSigner: Signer | zk.Signer | TronSigner;
     hardwareWallet?: string;
     unknown: boolean;
   }> {
-    let ethersSigner: Signer | zk.Signer | undefined;
-    let wallet: Wallet | zk.Wallet | undefined;
+    let ethersSigner: Signer | zk.Signer | TronSigner | undefined;
+    let wallet: Wallet | zk.Wallet | TronSigner | undefined;
     let hardwareWallet: string | undefined = undefined;
     let unknown = false;
     let derivationPath: string | undefined = undefined;
@@ -1644,6 +1663,9 @@ Note that in this case, the contract deployment will not behave the same if depl
       if (network.zksync) {
         wallet = new zk.Wallet(from, provider as zk.Provider);
         ethersSigner = wallet as unknown as zk.Signer;
+      } else if (network.tron) {
+        wallet = (provider as TronWeb3Provider).addSigner(from);
+        ethersSigner = wallet;
       } else {
         wallet = new Wallet(from, provider);
         ethersSigner = wallet;
@@ -2730,7 +2752,13 @@ data: ${data}
     if (typeof args === 'undefined') {
       args = [];
     }
-    let caller: Web3Provider | Signer | zk.Web3Provider | zk.Signer = provider;
+    let caller:
+      | Web3Provider
+      | Signer
+      | zk.Web3Provider
+      | zk.Signer
+      | TronWeb3Provider
+      | TronSigner = provider;
     const {ethersSigner} = await getOptionalFrom(options.from);
     if (ethersSigner) {
       caller = ethersSigner;
@@ -2784,9 +2812,7 @@ data: ${data}
   }
   async function getSigner(address: string): Promise<Signer> {
     await init();
-    const {
-      ethersSigner
-    } = await getFrom(address);
+    const {ethersSigner} = await getFrom(address);
     return ethersSigner;
   }
 
@@ -2802,7 +2828,7 @@ data: ${data}
     rawTx,
     read,
     deterministic,
-    getSigner
+    getSigner,
   };
 
   const utils = {

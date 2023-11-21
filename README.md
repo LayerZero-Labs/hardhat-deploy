@@ -47,8 +47,8 @@ _A [Hardhat](https://hardhat.org) Plugin For Replicable Deployments And Easy Tes
 - [Handling contract using libraries](#handling-contract-using-libraries)
 - [Exporting Deployments](#exporting-deployments)
 - [Deploying and Upgrading Proxies](#deploying-and-upgrading-proxies)
-    - [When the constructor and init functions are different](#when-the-constructor-and-init-functions-are-different)
-    - [Proxy deployment options](#proxy-deployment-options)
+  - [When the constructor and init functions are different](#when-the-constructor-and-init-functions-are-different)
+  - [Proxy deployment options](#proxy-deployment-options)
 - [Builtin-In Support For Diamonds (EIP2535)](#builtin-in-support-for-diamonds-eip2535)
   - [deployment / upgrade](#deployment--upgrade)
   - [onUpgrade calls](#onupgrade-calls)
@@ -144,7 +144,6 @@ require('hardhat-deploy');
 ```
 
 if you use `ethers.js` we recommend you also install `hardhat-deploy-ethers` which add extra features to access deployments as ethers contract.
-
 
 ```bash
 npm install --save-dev  @nomiclabs/hardhat-ethers hardhat-deploy-ethers ethers
@@ -632,7 +631,7 @@ module.exports = async ({
   getChainId,
   getUnnamedAccounts,
 }) => {
-  const {deploy,execute} = deployments;
+  const {deploy, execute} = deployments;
   const {deployer} = await getNamedAccounts();
 
   const OVM_L1ERC20Gateway = await hre.companionNetworks['l1'].deployments.get(
@@ -1081,7 +1080,7 @@ For both --export and --export-all, if the extension ends in .ts it will generat
 
 ## Deploying and Upgrading Proxies
 
-As mentioned above, the deploy function can also deploy a contract through a proxy. It can be done without modification of the contract *as long as its number of constructor arguments matches the proxy initialization/update function*. If the arguments do not match, see [this section below](#when-the-constructor-and-init-functions-are-different).
+As mentioned above, the deploy function can also deploy a contract through a proxy. It can be done without modification of the contract _as long as its number of constructor arguments matches the proxy initialization/update function_. If the arguments do not match, see [this section below](#when-the-constructor-and-init-functions-are-different).
 
 The default Proxy is both ERC-1967 and ERC-173 Compliant, but other proxy can be specified, like openzeppelin transparent proxies.
 
@@ -1168,20 +1167,22 @@ module.exports = async ({getNamedAccounts, deployments, getChainId}) => {
   // you could pause the deployment here and wait for input to continue
 };
 ```
+
 #### When the constructor and init functions are different
+
 When the constructor and proxy have different signatures, you will not be able to use the top level `args` property. Instead you can use the `execute` property of `proxy` to specify the `init` method and arguments. This will not try to pass any arguments to the constructor.
 
 ```typescript
-const deployed = await deploy("YourContract", {
+const deployed = await deploy('YourContract', {
   from: deployer,
   proxy: {
     execute: {
       init: {
-        methodName: "initialize",
-        args: ["arg1", "arg2"],
+        methodName: 'initialize',
+        args: ['arg1', 'arg2'],
       },
     },
-    proxyContract: "OpenZeppelinTransparentProxy",
+    proxyContract: 'OpenZeppelinTransparentProxy',
   },
   log: true,
   autoMine: true,
@@ -1189,6 +1190,7 @@ const deployed = await deploy("YourContract", {
 ```
 
 #### Proxy deployment options
+
 The full proxy options is as follow:
 
 ```ts
@@ -1240,8 +1242,6 @@ it matches:
   When this option is chosen, the `DefaultProxyAdmin` is also used as admin since Transparent Proxy kind of need an intermediary contract for administration. This can be configured via the `viaAdminContract` option. Note that the DefaultProxyAdmin is slightly different than the one used by openzeppelin as it allow you to set a different owner than msg.sender on first deploy, something openzeppelin version do not allow, see : https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2639
 
 - `OptimizedTransparentProxy`: This contract is similar to above, except that it is optimized to not require storage read for the admin on every call.
-
-
 
 ## Builtin-In Support For Diamonds (EIP2535)
 
@@ -1459,7 +1459,7 @@ The same applies to the `console` task.
 
 It is possible to execute only specific parts of the deployments with `hardhat deploy --tags <tags>`
 
-`<tags>` is an array of tags, separated by comma, for example `hardhat deploy --tags tag1,tag2` will look for the scripts containing **any** of the tags `tag1`  or `tag2`
+`<tags>` is an array of tags, separated by comma, for example `hardhat deploy --tags tag1,tag2` will look for the scripts containing **any** of the tags `tag1` or `tag2`
 
 To execute only the scripts containing **all** the tags, add `--tags-require-all` flag, for example `hardhat deploy --tags tag1,tag2 --tags-require-all` will look for the scripts containing **all** of the tags `tag1` and `tag2`
 
@@ -1528,3 +1528,28 @@ module.exports.runAtTheEnd = true;
 ```
 
 Tags can also be used in test with `deployments.fixture`. This allows you to test a subset of the deploy script.
+
+---
+
+## Tron Compatibility
+
+_In active development. Currently does not support deterministic deployments._
+
+To enable, set a boolean in config.network[Any Tron Network].tron. The url must point to the json rpc node whose format is typically `${fullNode}/jsonrpc`. To instantiate the Tron signer either an array of private keys or an HD wallet must be provided. For example:
+
+```js
+ networks: {
+    tron_docker: {
+      url: `http://127.0.0.1:9090/jsonrpc`,
+      // tronbox/tre generated private keys, DO NOT USE IN PRODUCTION
+      accounts: ["8a492a3acaa2981404653b72e039ac076a7651b0ea63f6a031703c4d3c74a122"],
+      tron: true,
+    },
+    shasta: {
+      url: 'https://api.shasta.trongrid.io/jsonrpc'
+      accounts: [process.env.TESTNET_TRON_PRIVATE_KEY2, process.env.TESTNET_TRON_PRIVATE_KEY],
+      httpHeaders: { "TRON-PRO-API-KEY": "" },
+      tron: true,
+    },
+ }
+```
