@@ -141,12 +141,9 @@ export class TronSigner extends Wallet {
       throw new TronWebError(response as TronWebError1); // in this case tronweb returs an error-like object with a message and a code
     }
     console.log('\nTransaction broadcast, waiting for response...');
-    await Time.sleep(6 * Time.SECOND);
-    const txRes = await this.provider.getTransaction(ensure0x(response.txid));
-    txRes.wait = (this.provider as TronWeb3Provider)._buildWait(
-      txRes.confirmations,
-      response.txid
-    );
+    const provider = this.provider as TronWeb3Provider;
+    const txRes = await provider.getTransactionWithRetry(response.txid);
+    txRes.wait = provider._buildWait(txRes.confirmations, response.txid);
     return txRes;
   }
 

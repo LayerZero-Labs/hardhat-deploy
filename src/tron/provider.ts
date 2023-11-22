@@ -95,8 +95,8 @@ export class TronWeb3Provider extends Web3Provider {
    * If a signer already exists for the derived address, it returns the existing signer.
    * Otherwise, it creates a new `TronSigner`, adds it to the collection, and returns it.
    *
-   * @param {string} pk - The private key to create a new signer.
-   * @returns {TronSigner} The newly added or existing `TronSigner` instance.
+   * @param pk - The private key to create a new signer.
+   * @returns The newly added or existing `TronSigner` instance.
    */
   addSigner(pk: string): TronSigner {
     const addr = new Wallet(pk).address;
@@ -112,7 +112,7 @@ export class TronWeb3Provider extends Web3Provider {
    * This method overrides the `getTransactionCount` method. Since the Tron protocol does not support
    * the concept of nonces as in Ethereum, this method returns a dummy value.
    *
-   * @returns {Promise<number>} A promise that resolves to the dummy transaction count.
+   * @returns A promise that resolves to the dummy transaction count.
    */
   override async getTransactionCount(): Promise<number> {
     console.log(
@@ -128,9 +128,9 @@ export class TronWeb3Provider extends Web3Provider {
    * associated with the provided address. If no signer is found for the given address, it throws an error.
    *
    * @template T - The type of signer to be returned, either `TronSigner` or `JsonRpcSigner`.
-   * @param {string} address - The address to retrieve the signer for.
-   * @returns {T} The signer instance corresponding to the given address.
-   * @throws {Error} Throws an error if no signer exists for the provided address.
+   * @param address - The address to retrieve the signer for.
+   * @returns The signer instance corresponding to the given address.
+   * @throws Throws an error if no signer exists for the provided address.
    */
   override getSigner<T extends TronSigner | JsonRpcSigner = JsonRpcSigner>(
     address: string
@@ -149,7 +149,7 @@ export class TronWeb3Provider extends Web3Provider {
    * If the cached value is recent (within 15 seconds), it returns the cached value. Otherwise, it fetches
    * the current gas price from the network. If fetching fails, it defaults to a predefined energy price.
    *
-   * @returns {Promise<BigNumber>} A promise that resolves to the current gas price as a BigNumber.
+   * @returns A promise that resolves to the current gas price as a BigNumber.
    */
   override async getGasPrice(): Promise<BigNumber> {
     const DEFAULT_ENERGY_PRICE = BigNumber.from('1000');
@@ -166,8 +166,8 @@ export class TronWeb3Provider extends Web3Provider {
    * This method first checks if the signed transaction is a simple TRX transfer (send TRX transaction).
    * If so, it handles the transaction through the `sendTrx` method.
    *
-   * @param {string | Promise<string>} signedTransaction - The signed transaction or a promise that resolves to it.
-   * @returns {Promise<TransactionResponse>} A promise that resolves to the transaction response.
+   * @param signedTransaction - The signed transaction or a promise that resolves to it.
+   * @returns A promise that resolves to the transaction response.
    */
   override async sendTransaction(
     signedTransaction: string | Promise<string>
@@ -193,11 +193,11 @@ export class TronWeb3Provider extends Web3Provider {
    * If the value is extremely large (more than 1000 TRX), it scales down the value to prevent errors.
    * After sending the transaction, it waits briefly for the transaction to be processed.
    *
-   * @param {string} from - The address to send TRX from.
-   * @param {string} to - The address to send TRX to.
-   * @param {BigNumber} value - The amount of TRX to send, as a BigNumber.
-   * @returns {Promise<TransactionResponse>} A promise that resolves to the transaction response.
-   * @throws {TronWebError} Throws an error if the transaction fails.
+   * @param from - The address to send TRX from.
+   * @param to - The address to send TRX to.
+   * @param value - The amount of TRX to send, as a BigNumber.
+   * @returns A promise that resolves to the transaction response.
+   * @throws Throws an error if the transaction fails.
    */
   async sendTrx(
     from: string,
@@ -215,8 +215,7 @@ export class TronWeb3Provider extends Web3Provider {
     if (!('result' in response) || !response.result) {
       throw new TronWebError(response as TronWebError1);
     }
-    await Time.sleep(5 * Time.SECOND);
-    const txRes = await this.getTransaction(ensure0x(response.txid));
+    const txRes = await this.getTransactionWithRetry(response.txid);
     txRes.wait = this._buildWait(txRes.confirmations, response.txid);
     return txRes;
   }
@@ -228,9 +227,9 @@ export class TronWeb3Provider extends Web3Provider {
    * of a given transaction until it reaches the specified target. It checks the transaction status every second.
    * If the transaction is found to have failed (status 0), a `TronTransactionFailedError` is thrown.
    *
-   * @param {number} initialConfirmations - The initial number of confirmations at the time of this method call.
-   * @param {string} hash - The hash of the transaction to wait for.
-   * @returns {Function} A function that takes `targetConfirmations` and returns a promise that resolves to the transaction receipt.
+   * @param initialConfirmations - The initial number of confirmations at the time of this method call.
+   * @param hash - The hash of the transaction to wait for.
+   * @returns A function that takes `targetConfirmations` and returns a promise that resolves to the transaction receipt.
    */
   _buildWait(initialConfirmations: number, hash: string) {
     return async (
@@ -239,8 +238,9 @@ export class TronWeb3Provider extends Web3Provider {
       let curr_conf = initialConfirmations;
       while (targetConfirmations && curr_conf < targetConfirmations) {
         await Time.sleep(Time.SECOND); // sleep 1 sec
-        const {confirmations: latest_conf} = await this.getTransaction(
-          ensure0x(hash)
+        const {confirmations: latest_conf} = await this.getTransactionWithRetry(
+          hash,
+          3
         );
         curr_conf = latest_conf;
       }
@@ -254,14 +254,42 @@ export class TronWeb3Provider extends Web3Provider {
   }
 
   /**
+   * Attempts to retrieve a transaction response from the jsonrpc node using the hash, with a retry mechanism.
+   *
+   * This method tries to get a transaction by its hash. If the initial attempt fails, it retries
+   * the operation, up to a specified number of times. Between each retry, the method waits for
+   * a period that increases linearly, with an additional random jitter to avoid simultaneous
+   * retry spikes. This approach is useful for handling transient network issues, or the sync delay that can happen between
+   * a Tron fullNode and its rpc node
+   *
+   * @param hash The hash of the transaction to retrieve.
+   * @param retries The maximum number of attempts to retrieve the transaction. Defaults to 10.
+   * @returns A promise that resolves to the transaction response.
+   */
+  public async getTransactionWithRetry(
+    hash: string,
+    retries = 10
+  ): Promise<TransactionResponse> {
+    for (let i = 1; i < retries; i++) {
+      try {
+        return await this.getTransaction(ensure0x(hash));
+      } catch (error) {}
+      // Linear backoff with jitter
+      const jitter = Math.floor(Math.random() * 300);
+      await Time.sleep(Time.SECOND + jitter);
+    }
+    return await this.getTransaction(ensure0x(hash));
+  }
+
+  /**
    * Estimates the gas required for a transaction on the TRON network.
    *
    * This method overrides the `estimateGas` method to accommodate TRON's [specific requirements](https://developers.tron.network/reference/eth_estimategas).
    * TRON does not support EIP-1559 transactions and nonces, so related fields are removed from the transaction object.
    * It then calls the superclass's `estimateGas` method for the actual estimation.
    *
-   * @param {Deferrable<TransactionRequest>} transaction - The transaction object to estimate gas for.
-   * @returns {Promise<BigNumber>} A promise that resolves to the estimated gas as a BigNumber.
+   * @param transaction - The transaction object to estimate gas for.
+   * @returns A promise that resolves to the estimated gas as a BigNumber.
    */
   override async estimateGas(
     transaction: Deferrable<TransactionRequest>
