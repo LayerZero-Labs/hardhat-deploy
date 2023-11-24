@@ -272,7 +272,9 @@ export class TronWeb3Provider extends Web3Provider {
   ): Promise<TransactionResponse> {
     for (let i = 1; i < retries; i++) {
       try {
-        return await this.getTransaction(ensure0x(hash));
+        const response = await this.getTransaction(ensure0x(hash)); // can return null!
+        if (response == null) throw '';
+        return response;
       } catch (error) {}
       // Linear backoff with jitter
       const jitter = Math.floor(Math.random() * 300);
