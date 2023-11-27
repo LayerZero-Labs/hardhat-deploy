@@ -43,6 +43,10 @@ export const TASK_DEPLOY_RUN_DEPLOY = 'deploy:runDeploy';
 export const TASK_EXPORT = 'export';
 export const TASK_ETHERSCAN_VERIFY = 'etherscan-verify';
 export const TASK_SOURCIFY = 'sourcify';
+// need to reexport all hardhat types. Sometimes intellisense will not correctly take into account the augmented interfaces set in type-extensions.ts
+// even if this plug-in is correctly imported.
+// importing the hardhat types from this package rather than hardhat is a workaround that issue.
+export * from 'hardhat/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let nodeTaskArgs: Record<string, any> = {};
