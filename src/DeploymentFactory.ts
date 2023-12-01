@@ -8,7 +8,7 @@ import * as zk from 'zksync-web3';
 import {Address, ExtendedArtifact} from '../types';
 import {getAddress} from '@ethersproject/address';
 import {keccak256 as solidityKeccak256} from '@ethersproject/solidity';
-import {hexConcat} from '@ethersproject/bytes';
+import {arrayify, hexConcat} from '@ethersproject/bytes';
 import {TronContractFactory} from './tron/contract';
 import {TronSigner} from './tron/signer';
 import {CreateSmartContract} from './tron/types';
@@ -161,6 +161,12 @@ export class DeploymentFactory {
     const newTransaction = await this.getDeployTransaction();
     const newData = newTransaction.data?.toString();
     if (this.isZkSync) {
+      const EIP712_TX_TYPE = 0x71;
+      const bytes = arrayify(transaction.data);
+      // zk.utils.parseTransaction cannot parse tx others than eip712
+      if (bytes[0] != EIP712_TX_TYPE) {
+        return transaction.data !== newData;
+      }
       const deserialize = zk.utils.parseTransaction(transaction.data) as any;
       const desFlattened = hexConcat(deserialize.customData.factoryDeps);
       const factoryDeps = await this.extractFactoryDeps(this.artifact);
