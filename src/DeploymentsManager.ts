@@ -1050,6 +1050,13 @@ export class DeploymentsManager {
     if (this.env.config.external?.contracts) {
       for (const externalContracts of this.env.config.external.contracts) {
         if (externalContracts.deploy) {
+          // make sure we're not deploying on Tron contracts that are not meant to be deployed there
+          if (
+            this.env.config.paths.artifacts.endsWith('-tron') && // are we using tron-solc compiler?
+            externalContracts.artifacts.some((str) => !str.endsWith('-tron')) // are some of the artifacts folder not ending in -tron?
+          ) {
+            continue;
+          }
           this.db.onlyArtifacts = externalContracts.artifacts;
           try {
             await this.executeDeployScripts(
@@ -1385,7 +1392,37 @@ export class DeploymentsManager {
     }
   }
 
+  /**
+   * Retrieves import paths for Tron-specific contracts.
+   *
+   * This method enforces a safety check to ensure that only contracts compiled for Tron are deployed.
+   * It requires that import paths for external folders must end with '-tron'. The method checks both
+   * the project's own import paths and any external contracts specified in the configuration.
+   *
+   * @returns {string[]} An array of import paths that conform to the Tron-specific naming convention.
+   */
+  private getTronImportPaths() {
+    const importPaths = [];
+    if (this.env.config.paths.imports.endsWith('-tron')) {
+      importPaths.push(this.env.config.paths.imports);
+    }
+    if (this.env.config.external && this.env.config.external.contracts) {
+      for (const externalContracts of this.env.config.external.contracts) {
+        for (const artifact of externalContracts.artifacts) {
+          if (artifact.endsWith('-tron')) {
+            importPaths.push(artifact);
+          }
+        }
+      }
+    }
+    return importPaths;
+  }
+
   private getImportPaths() {
+    // this check is true when the hardhat-tron-solc plugin is used
+    if (this.env.config.paths.artifacts.endsWith('-tron')) {
+      return this.getTronImportPaths();
+    }
     const importPaths = [this.env.config.paths.imports];
     if (this.env.config.external && this.env.config.external.contracts) {
       for (const externalContracts of this.env.config.external.contracts) {
