@@ -20,7 +20,7 @@ contract Diamond {
     /// @notice This construct a diamond contract
     /// @param _contractOwner the owner of the contract. With default DiamondCutFacet, this is the sole address allowed to make further cuts.
     /// @param _diamondCut the list of facet to add
-    /// @param _initializations the list of initialization pair to execute. This allow to setup a contract with multiple level of independent initialization.
+    /// @param _initializations the list of initialization pair to execute. This allows to setup a contract with multiple level of independent initialization.
     constructor(
         address _contractOwner,
         IDiamondCut.FacetCut[] memory _diamondCut,
