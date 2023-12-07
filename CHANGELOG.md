@@ -278,7 +278,7 @@
 
 ### Patch Changes
 
-- do not resave, increasing unecessarely numDeployments for diamond
+- do not resave, increasing unnecessarily numDeployments for diamond
 
 ## 0.11.0
 
@@ -439,7 +439,7 @@
 
 ### Patch Changes
 
-- throw if multiple artifact with same not-fully qualified exist from hardhat artifacts
+- throw if multiple artifact with the same not-fully qualified exist from hardhat artifacts
 
 ## 0.9.19
 
@@ -493,7 +493,7 @@
 
 ### Patch Changes
 
-- add getNetworkName() which return the forked name if any
+- add getNetworkName() which returns the forked name if any
 
 ## 0.9.10
 
@@ -589,7 +589,7 @@
 
 ### Patch Changes
 
-- tags consider for external deploy scripts
+- tags considered for external deploy scripts
 
 ## 0.8.8
 
@@ -789,7 +789,7 @@
 - 07d9aa4: fix proxy upgrade
 - 4ab4b32: fix types declaration not being published
 - 665b57c: Breaking change for external field: isolate external deploy script from other artifacts
-- ad70a48: allow to execute proxy deploy after deployment was made elsewhere to actualise the deployment files
+- ad70a48: allow to execute proxy deploy after deployment was made elsewhere to actualize the deployment files
 - 9bf606d: bring back diamond support
 - 4a03db2: from as privateKey fix + clear npm script cache so watch work as intended
 - 7035011: add support for ledger hardware wallet
@@ -813,7 +813,7 @@
   ```
 
 - 2c7afa4: add better typing for createFixture options
-- 3f81eeb: fix determinsitic diamond redeployment + verifiability of contracts using libraries
+- 3f81eeb: fix deterministic diamond redeployment + verifiability of contracts using libraries
 - b4a8037: remove abi conflict checks for default transparent proxies
 - fad474b: fix wrong link for sourcify and add binance chain for etherscan verification
 
