@@ -1533,7 +1533,9 @@ Tags can also be used in test with `deployments.fixture`. This allows you to tes
 
 ## Tron Compatibility
 
-_In active development. Currently does not support deterministic deployments._
+_In active development_
+
+Does not support deterministic deployments. Contracts addresses on Tron are computed using, amongst other things, the timestamp of the block hash the create transaction is included in. Thus having foreknown, deterministic addresses is not practically achievable.
 
 To enable, set a boolean in config.network[Any Tron Network].tron. The url must point to the json rpc node whose format is typically `${fullNode}/jsonrpc`. To instantiate the Tron signer either an array of private keys or an HD wallet must be provided. For example:
 
