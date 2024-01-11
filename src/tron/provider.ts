@@ -44,7 +44,7 @@ import {TronWebError1} from 'tronweb/interfaces';
  * @param {Networkish | undefined} [network] - The network configuration.
  */
 export class TronWeb3Provider extends Web3Provider {
-  protected signer = new Map<string, TronSigner>();
+  protected signers = new Map<string, TronSigner>();
   public ro_tronweb: TronWeb;
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
   private readonly fullHost: string;
@@ -67,7 +67,7 @@ export class TronWeb3Provider extends Web3Provider {
     if (Array.isArray(accounts)) {
       for (const pk of accounts) {
         const addr = new Wallet(pk).address;
-        this.signer.set(addr, new TronSigner(fullHost, headers, pk, this));
+        this.signers.set(addr, new TronSigner(fullHost, headers, pk, this));
       }
     } else if (typeof accounts !== 'string' && 'mnemonic' in accounts) {
       const hdNode = HDNode.fromMnemonic(
@@ -77,7 +77,7 @@ export class TronWeb3Provider extends Web3Provider {
       const derivedNode = hdNode.derivePath(
         `${accounts.path}/${accounts.initialIndex}`
       );
-      this.signer.set(
+      this.signers.set(
         derivedNode.address,
         new TronSigner(fullHost, headers, derivedNode.privateKey, this)
       );
@@ -100,9 +100,9 @@ export class TronWeb3Provider extends Web3Provider {
    */
   addSigner(pk: string): TronSigner {
     const addr = new Wallet(pk).address;
-    if (this.signer.has(addr)) return this.signer.get(addr)!;
+    if (this.signers.has(addr)) return this.signers.get(addr)!;
     const signer = new TronSigner(this.fullHost, this.headers, pk, this);
-    this.signer.set(addr, signer);
+    this.signers.set(addr, signer);
     return signer;
   }
 
@@ -135,7 +135,7 @@ export class TronWeb3Provider extends Web3Provider {
   override getSigner<T extends TronSigner | JsonRpcSigner = JsonRpcSigner>(
     address: string
   ): T {
-    const signer = this.signer.get(address);
+    const signer = this.signers.get(address);
     if (!signer) {
       throw new Error(`No Tron signer exists for this address ${address}`);
     }

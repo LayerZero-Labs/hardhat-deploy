@@ -7,7 +7,7 @@ import {BigNumber, Wallet} from 'ethers';
 import {Deferrable} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
-import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
+import {Time, TronWebGetTransactionError, strip0x} from './utils';
 import {CreateSmartContract, MethodSymbol, TronTxMethods} from './types';
 import {TronWebError} from './utils';
 import {
