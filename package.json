@@ -1,6 +1,6 @@
 {
   "name": "@layerzerolabs/hardhat-deploy",
-  "version": "0.11.43-lz.5",
+  "version": "0.11.45-lz.1",
   "description": "Hardhat Plugin For Replicable Deployments And Tests",
   "repository": {
     "type": "git",
