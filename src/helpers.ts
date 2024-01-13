@@ -559,7 +559,7 @@ export function addHelpers(
     if (options.deterministicDeployment) {
       // feature not ready for Tron yet
       if (network.tron) {
-        throw new Error('deterministic deployment not yet supported on Tron');
+        throw new Error('deterministic deployment not supported on Tron');
       }
       if (typeof unsignedTx.data === 'string') {
         const create2DeployerAddress = await ensureCreate2DeployerReady(
@@ -2712,10 +2712,28 @@ data: ${data}
       }
     }
 
-    tx = await handleSpecificErrors(
-      ethersContract.functions[methodName](...ethersArgs)
-    );
-
+    if (network.tron) {
+      const method = ethersContract.interface.getFunction(methodName);
+      const methodParams = method.inputs.map((input) => input.type);
+      const funcSig = `${methodName}(${methodParams.join(',')})`;
+      const tronArgs = args.map((a, i) => ({
+        type: methodParams[i],
+        value: a,
+      }));
+      tx = await handleSpecificErrors(
+        (ethersSigner.provider as TronWeb3Provider).triggerSmartContract(
+          from,
+          deployment.address,
+          funcSig,
+          tronArgs,
+          overrides
+        )
+      );
+    } else {
+      tx = await handleSpecificErrors(
+        ethersContract.functions[methodName](...ethersArgs)
+      );
+    }
     tx = await onPendingTx(tx);
 
     if (options.log || hardwareWallet) {
