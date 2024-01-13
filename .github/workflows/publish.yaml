@@ -17,8 +17,9 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8
-      - run: pnpm test
       - run: pnpm install
+      - run: pnpm test
       - run: npm publish --access=restricted
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
