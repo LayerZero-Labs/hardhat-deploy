@@ -1,5 +1,7 @@
 name: Publish Package to npmjs
 on:
+  push:
+    branches: [ci-testing]
   release:
     types: [published]
 jobs:
@@ -15,6 +17,7 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8
+      - run: pnpm test
       - run: pnpm install
       - run: npm publish --access=restricted
         env:
