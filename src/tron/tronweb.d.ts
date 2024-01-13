@@ -251,7 +251,7 @@ declare module 'tronweb' {
       options: Record<string, unknown>,
       parameter: any[],
       issuerAddress: string
-    ): Promise<TriggerConstantContractResult | Record<string, unknown>>;
+    ): Promise<TriggerConstantContractResult>;
     undelegateResource(
       amount: number,
       receiverAddress: string,
