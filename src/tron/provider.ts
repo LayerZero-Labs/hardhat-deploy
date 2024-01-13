@@ -17,9 +17,14 @@ import {
   TronWebError,
   ensure0x,
 } from './utils';
-import {Deferrable, HDNode, parseTransaction} from 'ethers/lib/utils';
+import {
+  Deferrable,
+  HDNode,
+  isAddress,
+  parseTransaction,
+} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
-import {TronWebError1} from 'tronweb/interfaces';
+import {Transaction, TronWebError1} from 'tronweb/interfaces';
 
 /**
  * A provider for interacting with the TRON blockchain, extending the Web3Provider.
@@ -175,11 +180,17 @@ export class TronWeb3Provider extends Web3Provider {
     signedTransaction = await signedTransaction;
     const deser = parseTransaction(signedTransaction);
     const {to, data, from, value} = deser;
-    // is this a send eth transaction?
-    if (to && from && (!data || data == '0x')) {
-      return this.sendTrx(from, to, value);
+
+    // is this a send trx transaction?
+    if (this.isSendTRX(to, from, data)) {
+      return this.sendTrx(from!, to!, value);
     }
-    // TODO, smart contract calls, etc
+    // is this a smart contract transaction?
+    if (await this.isSmartContractCall(to, from, data)) {
+      throw new Error(
+        'direct smart contract call not yet implemented for Tron'
+      );
+    }
 
     // otherwise don't alter behavior
     return super.sendTransaction(signedTransaction);
@@ -211,10 +222,72 @@ export class TronWeb3Provider extends Web3Provider {
       this.ro_tronweb.address.toHex(from)
     );
     const signedTx = await this.getSigner<TronSigner>(from).sign(unsignedTx);
-    const response = await this.ro_tronweb.trx.sendRawTransaction(signedTx);
+    return this.sendRawTransaction(signedTx);
+  }
+
+  /**
+   * Triggers a function call on a specified smart contract in the Tron network.
+   *
+   * This method constructs a transaction to call a function of a smart contract. It requires
+   * the sender's address, the contract address, the function signature, parameters for the function,
+   * a fee limit for the transaction, and an optional value to send with the transaction. The transaction
+   * is then signed and sent to the Tron network.
+   *
+   * @param from - The address of the sender initiating the contract call.
+   * @param contract - The address of the smart contract to interact with.
+   * @param funcSig - The function signature to call in the smart contract.
+   * @param params - An array of parameters for the function call, each with a type and value.
+   * @param feeLimit - The maximum fee limit for the transaction.
+   * @param value - (Optional) The value in TRX or a BigNumber object to send with the transaction.
+   * @returns A promise that resolves to a `TransactionResponse` object representing the result of the transaction.
+   */
+  async triggerSmartContract(
+    from: string,
+    contract: string,
+    funcSig: string,
+    params: {type: string; value: string | number}[],
+    options: {
+      gasLimit?: string | number | BigNumber;
+      value?: string | BigNumber;
+    }
+  ) {
+    const feeLimit = await this.getSigner<TronSigner>(from).getFeeLimit(
+      {to: contract},
+      options
+    );
+    const {transaction} =
+      await this.ro_tronweb.transactionBuilder.triggerSmartContract(
+        this.ro_tronweb.address.toHex(contract),
+        funcSig,
+        {feeLimit, callValue: options.value?.toString() ?? 0},
+        params,
+        this.ro_tronweb.address.toHex(from)
+      );
+    const signedTx = await this.getSigner<TronSigner>(from).sign(transaction);
+    return this.sendRawTransaction(signedTx);
+  }
+
+  /**
+   * Sends a raw transaction to the Tron network and returns the transaction response.
+   *
+   * This method accepts a raw transaction object, sends it to the Tron network, and waits
+   * for the transaction to be acknowledged. After the transaction is acknowledged, it retrieves
+   * and returns the transaction response. If the transaction fails at any stage, the method
+   * throws an error.
+   *
+   * @param transaction - The raw transaction object to be sent to the network.
+   * @returns A promise that resolves to a `TransactionResponse` object, which includes details of the processed transaction.
+   * @throws `TronWebError` - If the transaction fails to be sent or acknowledged by the network.
+   *
+   */
+  async sendRawTransaction(
+    transaction: Transaction
+  ): Promise<TransactionResponse> {
+    const response = await this.ro_tronweb.trx.sendRawTransaction(transaction);
     if (!('result' in response) || !response.result) {
       throw new TronWebError(response as TronWebError1);
     }
+    console.log('\nTron transaction broadcast, waiting for response...');
     const txRes = await this.getTransactionWithRetry(response.txid);
     txRes.wait = this._buildWait(txRes.confirmations, response.txid);
     return txRes;
@@ -301,5 +374,48 @@ export class TronWeb3Provider extends Web3Provider {
       delete (transaction as {[key: string]: any})[field];
     }
     return super.estimateGas(transaction);
+  }
+
+  /**
+   * Checks if a given transaction is a smart contract call.
+   *
+   * This method examines the `to`, `from`, and `data` fields of a transaction
+   * to determine if it is likely a call to a smart contract. It considers a transaction
+   * as a smart contract call if all fields are defined, the addresses are valid,
+   * the data field has a significant length, and there is associated contract code.
+   *
+   * @param to - The recipient address of the transaction.
+   * @param from - The sender address of the transaction.
+   * @param data - The data payload of the transaction.
+   * @returns A promise that resolves to `true` if the transaction is a smart contract call, otherwise `false`.
+   */
+  async isSmartContractCall(
+    to?: string,
+    from?: string,
+    data?: string
+  ): Promise<boolean> {
+    if ([to, from, data].some((f) => f == undefined)) return false;
+    if ([to, from].some((f) => isAddress(f!) == false)) return false;
+    if (data!.length <= 2) return false;
+    const contractCode = await this.getCode(to!);
+    return contractCode != undefined && contractCode?.length > 2;
+  }
+
+  /**
+   * Determines if a transaction is a TRX (transfer) operation.
+   *
+   * This method checks if the provided `to`, `from`, and `data` fields
+   * of a transaction suggest a TRX operation. It considers a transaction as
+   * a TRX operation if the `to` and `from` fields are defined and the `data` field
+   * is either not present or equals '0x'.
+   *
+   * @param to - The recipient address of the transaction.
+   * @param from - The sender address of the transaction.
+   * @param data - The data payload of the transaction.
+   * @returns `true` if the transaction is likely a TRX operation, otherwise `false`.
+   */
+  isSendTRX(to?: string, from?: string, data?: string): boolean {
+    if ([to, from].some((f) => f == undefined)) return false;
+    return !data || data == '0x';
   }
 }
