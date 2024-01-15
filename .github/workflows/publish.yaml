@@ -1,5 +1,7 @@
 name: Publish Package to npmjs
 on:
+  push:
+    branches: [ci-testing]
   release:
     types: [published]
 jobs:
@@ -16,6 +18,8 @@ jobs:
         with:
           version: 8
       - run: pnpm install
+      - run: pnpm test
       - run: npm publish --access=restricted
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

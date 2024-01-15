@@ -1,0 +1,7 @@
+{
+  "require": "ts-node/register/files",
+  "exit": true,
+  "full-trace": false,
+  "timeout": 30000,
+  "parallel": false
+}

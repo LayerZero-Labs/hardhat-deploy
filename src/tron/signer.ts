@@ -7,7 +7,7 @@ import {BigNumber, Wallet} from 'ethers';
 import {Deferrable} from 'ethers/lib/utils';
 import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
-import {Time, TronWebGetTransactionError, ensure0x, strip0x} from './utils';
+import {Time, TronWebGetTransactionError, strip0x} from './utils';
 import {CreateSmartContract, MethodSymbol, TronTxMethods} from './types';
 import {TronWebError} from './utils';
 import {
@@ -135,16 +135,7 @@ export class TronSigner extends Wallet {
       );
 
     const signedTx = await this.sign(unsignedTx);
-
-    const response = await this.tronweb.trx.sendRawTransaction(signedTx);
-    if (!('result' in response) || !response.result) {
-      throw new TronWebError(response as TronWebError1); // in this case tronweb returs an error-like object with a message and a code
-    }
-    console.log('\nTransaction broadcast, waiting for response...');
-    const provider = this.provider as TronWeb3Provider;
-    const txRes = await provider.getTransactionWithRetry(response.txid);
-    txRes.wait = provider._buildWait(txRes.confirmations, response.txid);
-    return txRes;
+    return (this.provider as TronWeb3Provider).sendRawTransaction(signedTx);
   }
 
   /**
