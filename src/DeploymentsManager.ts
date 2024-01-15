@@ -213,6 +213,8 @@ export class DeploymentsManager {
         contractName: string
       ): Promise<ExtendedArtifact> => {
         if (this.db.onlyArtifacts) {
+          // For the Tron network there is already a mechanism in this file to ensure onlyArtifacts can only point to artifacts folder ending in -tron
+          // We assume those artifacts folder ending in -tron are compatible with Tron and have been compiled with tron-solc
           const artifactFromFolder = await getExtendedArtifactFromFolders(
             contractName,
             this.db.onlyArtifacts
