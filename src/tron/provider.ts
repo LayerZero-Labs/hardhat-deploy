@@ -16,6 +16,7 @@ import {
   TronTransactionFailedError,
   TronWebError,
   ensure0x,
+  strip0x,
 } from './utils';
 import {
   Deferrable,
@@ -398,7 +399,7 @@ export class TronWeb3Provider extends Web3Provider {
     if ([to, from].some((f) => isAddress(f!) == false)) return false;
     if (data!.length <= 2) return false;
     const contractCode = await this.getCode(to!);
-    return contractCode != undefined && contractCode?.length > 2;
+    return contractCode != undefined && strip0x(contractCode).length > 0;
   }
 
   /**
