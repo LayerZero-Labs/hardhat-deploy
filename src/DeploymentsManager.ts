@@ -75,6 +75,7 @@ export class DeploymentsManager {
   public impersonateUnknownAccounts: boolean;
   public impersonatedAccounts: string[];
   public addressesToProtocol: {[address: string]: string} = {};
+  public readonly isTronNetworkWithTronSolc: boolean;
 
   private network: Network;
 
@@ -136,6 +137,8 @@ export class DeploymentsManager {
       runAsNode: false,
     };
     this.env = env;
+    this.isTronNetworkWithTronSolc =
+      network.tron && (this.env.config as any)?.tronSolc?.enable;
     this.deploymentsPath = env.config.paths.deployments;
 
     // TODO
@@ -1054,7 +1057,7 @@ export class DeploymentsManager {
         if (externalContracts.deploy) {
           // make sure we're not deploying on Tron contracts that are not meant to be deployed there
           if (
-            this.env.config.paths.artifacts.endsWith('-tron') && // are we using tron-solc compiler?
+            this.isTronNetworkWithTronSolc && // are we using tron-solc compiler and is the network a Tron network?
             externalContracts.artifacts.some((str) => !str.endsWith('-tron')) // are some of the artifacts folder not ending in -tron?
           ) {
             continue;
@@ -1421,8 +1424,8 @@ export class DeploymentsManager {
   }
 
   private getImportPaths() {
-    // this check is true when the hardhat-tron-solc plugin is used
-    if (this.env.config.paths.artifacts.endsWith('-tron')) {
+    // this check is true when the hardhat-tron-solc plugin is used and the network is Tron
+    if (this.isTronNetworkWithTronSolc) {
       return this.getTronImportPaths();
     }
     const importPaths = [this.env.config.paths.imports];
