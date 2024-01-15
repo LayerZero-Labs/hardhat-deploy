@@ -2858,7 +2858,7 @@ data: ${data}
     execute, // tron compatible
     rawTx,
     read, // tron compatible
-    deterministic, // won't support tron (contracts addresses are dependent on timestamp)
+    deterministic, // won't support tron (contracts addresses are dependent on timestamps)
     getSigner, // tron compatible
   };
 

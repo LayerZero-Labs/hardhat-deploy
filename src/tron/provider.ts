@@ -230,15 +230,15 @@ export class TronWeb3Provider extends Web3Provider {
    *
    * This method constructs a transaction to call a function of a smart contract. It requires
    * the sender's address, the contract address, the function signature, parameters for the function,
-   * a fee limit for the transaction, and an optional value to send with the transaction. The transaction
+   * and an options object which may include a gas limit and an optional value to send with the transaction.
+   * The fee limit for the transaction is determined using the sender's signer. The transaction
    * is then signed and sent to the Tron network.
    *
    * @param from - The address of the sender initiating the contract call.
    * @param contract - The address of the smart contract to interact with.
    * @param funcSig - The function signature to call in the smart contract.
    * @param params - An array of parameters for the function call, each with a type and value.
-   * @param feeLimit - The maximum fee limit for the transaction.
-   * @param value - (Optional) The value in TRX or a BigNumber object to send with the transaction.
+   * @param options - An object containing optional parameters.
    * @returns A promise that resolves to a `TransactionResponse` object representing the result of the transaction.
    */
   async triggerSmartContract(
