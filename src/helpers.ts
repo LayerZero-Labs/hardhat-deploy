@@ -2850,16 +2850,16 @@ data: ${data}
   const extension: DeploymentsExtension = {
     ...partialExtension,
     fetchIfDifferent,
-    deploy,
+    deploy, // tron compatible
     diamond: {
       deploy: diamond,
     },
     catchUnknownSigner,
-    execute,
+    execute, // tron compatible
     rawTx,
-    read,
-    deterministic,
-    getSigner,
+    read, // tron compatible
+    deterministic, // won't support tron (contracts addresses are dependent on timestamp)
+    getSigner, // tron compatible
   };
 
   const utils = {
