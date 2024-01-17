@@ -14,13 +14,11 @@ const isArtifactName = (
 
 export const getDefaultArtifact = (
   name: string | DefaultArtifactsName,
-  tron?: boolean
+  tron: boolean
 ): ExtendedArtifact => {
   let artifacts: DefaultArtifacts = ea;
-  if (tron) {
-    console.log('loading default artifacts for Tron...');
-    artifacts = eaT;
-  }
+  if (tron) artifacts = eaT;
+
   switch (name) {
     case 'EIP173ProxyWithReceive':
       return artifacts.EIP173ProxyWithReceive;
