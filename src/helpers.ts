@@ -39,18 +39,7 @@ import {UnknownSignerError} from './errors';
 import {filterABI, mergeABIs, recode} from './utils';
 import fs from 'fs-extra';
 
-import OpenZeppelinTransparentProxy from '../extendedArtifacts/TransparentUpgradeableProxy.json';
-import OptimizedTransparentUpgradeableProxy from '../extendedArtifacts/OptimizedTransparentUpgradeableProxy.json';
-import DefaultProxyAdmin from '../extendedArtifacts/ProxyAdmin.json';
-import eip173Proxy from '../extendedArtifacts/EIP173Proxy.json';
-import eip173ProxyWithReceive from '../extendedArtifacts/EIP173ProxyWithReceive.json';
-import erc1967Proxy from '../extendedArtifacts/ERC1967Proxy.json';
-import diamondBase from '../extendedArtifacts/Diamond.json';
 import oldDiamonBase from './old_diamondbase.json';
-import diamondERC165Init from '../extendedArtifacts/DiamondERC165Init.json';
-import diamondCutFacet from '../extendedArtifacts/DiamondCutFacet.json';
-import diamondLoupeFacet from '../extendedArtifacts/DiamondLoupeFacet.json';
-import ownershipFacet from '../extendedArtifacts/OwnershipFacet.json';
 import {Artifact, EthereumProvider} from 'hardhat/types';
 import {DeploymentsManager} from './DeploymentsManager';
 import enquirer from 'enquirer';
@@ -64,6 +53,7 @@ import {DeploymentFactory} from './DeploymentFactory';
 import {TronWeb3Provider} from './tron/provider';
 import {TronSigner} from './tron/signer';
 import {CreateSmartContract} from './tron/types';
+import {getDefaultArtifact} from './defaultArtifacts';
 
 let LedgerSigner: any; // TODO type
 let ethersprojectHardwareWalletsModule: any | undefined;
@@ -1077,12 +1067,17 @@ export function addHelpers(
     upgradeMethod: string | undefined;
     upgradeArgsTemplate: any[];
   }> {
+    const {isTronNetworkWithTronSolc} = deploymentManager;
     const oldDeployment = await getDeploymentOrNUll(name);
     let contractName = options.contract;
     let implementationName = name + '_Implementation';
     let updateMethod: string | undefined;
     let updateArgs: any[] | undefined;
     let upgradeIndex;
+    const eip173Proxy: ExtendedArtifact = getDefaultArtifact(
+      'EIP173Proxy',
+      isTronNetworkWithTronSolc
+    );
     let proxyContract: ExtendedArtifact = eip173Proxy;
     let checkABIConflict = true;
     let checkProxyAdmin = true;
@@ -1154,34 +1149,28 @@ export function addHelpers(
             );
           } catch (e) {}
           if (!proxyContract || proxyContract === eip173Proxy) {
-            if (options.proxy.proxyContract === 'EIP173ProxyWithReceive') {
-              proxyContract = eip173ProxyWithReceive;
-            } else if (options.proxy.proxyContract === 'EIP173Proxy') {
-              proxyContract = eip173Proxy;
-            } else if (
-              options.proxy.proxyContract === 'OpenZeppelinTransparentProxy'
-            ) {
-              checkABIConflict = false;
-              proxyContract = OpenZeppelinTransparentProxy;
-              viaAdminContract = 'DefaultProxyAdmin';
-            } else if (
-              options.proxy.proxyContract === 'OptimizedTransparentProxy'
-            ) {
-              checkABIConflict = false;
-              proxyContract = OptimizedTransparentUpgradeableProxy;
-              viaAdminContract = 'DefaultProxyAdmin';
-              // } else if (options.proxy.proxyContract === 'UUPS') {
-              //   checkABIConflict = true;
-              //   proxyContract = UUPSProxy;
-            } else if (options.proxy.proxyContract === 'UUPS') {
-              checkABIConflict = false;
-              checkProxyAdmin = false;
-              proxyContract = erc1967Proxy;
-              proxyArgsTemplate = ['{implementation}', '{data}'];
-            } else {
-              throw new Error(
-                `no contract found for ${options.proxy.proxyContract}`
-              );
+            proxyContract = getDefaultArtifact(
+              options.proxy.proxyContract,
+              isTronNetworkWithTronSolc
+            );
+            switch (options.proxy.proxyContract) {
+              case 'EIP173ProxyWithReceive':
+              case 'EIP173Proxy':
+                break; // No specific logic, but don't throw an error
+              case 'OpenZeppelinTransparentProxy':
+              case 'OptimizedTransparentProxy':
+                checkABIConflict = false;
+                viaAdminContract = 'DefaultProxyAdmin';
+                break;
+              case 'UUPS':
+                checkABIConflict = false;
+                checkProxyAdmin = false;
+                proxyArgsTemplate = ['{implementation}', '{data}'];
+                break;
+              default:
+                throw new Error(
+                  `no contract found for ${options.proxy.proxyContract}`
+                );
             }
           }
         }
@@ -1314,7 +1303,10 @@ Note that in this case, the contract deployment will not behave the same if depl
 
         if (!proxyAdminContract) {
           if (viaAdminContract === 'DefaultProxyAdmin') {
-            proxyAdminContract = DefaultProxyAdmin;
+            proxyAdminContract = getDefaultArtifact(
+              'DefaultProxyAdmin',
+              isTronNetworkWithTronSolc
+            );
           } else {
             throw new Error(
               `no contract found for ${proxyAdminArtifactNameOrContract}`
@@ -1824,6 +1816,7 @@ Note that in this case, the contract deployment will not behave the same if depl
     name: string,
     options: DiamondOptions
   ): Promise<DeployResult> {
+    const {isTronNetworkWithTronSolc} = deploymentManager;
     let proxy: Deployment | undefined;
     const proxyName = name + '_DiamondProxy';
     const oldDeployment = await getDeploymentOrNUll(name);
@@ -1842,7 +1835,11 @@ Note that in this case, the contract deployment will not behave the same if depl
       return deployResult;
     }
 
-    let diamondArtifact: ExtendedArtifact = diamondBase;
+    let diamondArtifact: ExtendedArtifact = getDefaultArtifact(
+      'DiamondBase',
+      isTronNetworkWithTronSolc
+    );
+
     if (options.diamondContract) {
       if (typeof options.diamondContract === 'string') {
         diamondArtifact = await partialExtension.getExtendedArtifact(
@@ -1867,7 +1864,10 @@ Note that in this case, the contract deployment will not behave the same if depl
     if (options.defaultCutFacet === undefined || options.defaultCutFacet) {
       facetsSet.push({
         name: '_DefaultDiamondCutFacet',
-        contract: diamondCutFacet,
+        contract: getDefaultArtifact(
+          'DiamondCutFacet',
+          isTronNetworkWithTronSolc
+        ),
         args: [],
         deterministic: true,
       });
@@ -1878,14 +1878,20 @@ Note that in this case, the contract deployment will not behave the same if depl
     ) {
       facetsSet.push({
         name: '_DefaultDiamondOwnershipFacet',
-        contract: ownershipFacet,
+        contract: getDefaultArtifact(
+          'OwnershipFacet',
+          isTronNetworkWithTronSolc
+        ),
         args: [],
         deterministic: true,
       });
     }
     facetsSet.push({
       name: '_DefaultDiamondLoupeFacet',
-      contract: diamondLoupeFacet,
+      contract: getDefaultArtifact(
+        'DiamondLoupeFacet',
+        isTronNetworkWithTronSolc
+      ),
       args: [],
       deterministic: true,
     });
@@ -2249,7 +2255,10 @@ Note that in this case, the contract deployment will not behave the same if depl
             {
               from: options.from,
               deterministicDeployment: true,
-              contract: diamondERC165Init,
+              contract: getDefaultArtifact(
+                'DiamondERC165Init',
+                isTronNetworkWithTronSolc
+              ),
               autoMine: options.autoMine,
               estimateGasExtra: options.estimateGasExtra,
               estimatedGasLimit: options.estimatedGasLimit,
