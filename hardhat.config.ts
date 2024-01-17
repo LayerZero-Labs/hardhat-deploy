@@ -1,4 +1,3 @@
-import {HardhatUserConfig} from './src/index'; // import updated types
 import {internalTask, task} from 'hardhat/config';
 import {
   TASK_COMPILE_SOLIDITY_GET_COMPILER_INPUT,
@@ -8,6 +7,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import {Artifact, BuildInfo} from 'hardhat/types';
 import murmur128 from 'murmur-128';
+// Somewhat counterintuive, we have to import the current package since it is a peerDependency of hardhat-tron-solc
+import {HardhatUserConfig} from '@layerzerolabs/hardhat-deploy';
 import '@layerzerolabs/hardhat-tron-solc';
 
 function addIfNotPresent(array: string[], value: string) {
