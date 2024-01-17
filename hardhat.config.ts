@@ -150,7 +150,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     tron: {
-      url: `http://127.0.0.1:65130/jsonrpc`,
+      url: `http://127.0.0.1:9090/jsonrpc`,
       tron: true,
     },
   },
