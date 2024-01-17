@@ -7,7 +7,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import {Artifact, BuildInfo} from 'hardhat/types';
 import murmur128 from 'murmur-128';
-// Somewhat counterintuive, we have to import the current package since it is a peerDependency of hardhat-tron-solc
+// Somewhat counterintuive, @layerzerolabs/hardhat-deploy is a devDependency of itself.
+// It is required by hardhat-tron-solc who lists this package as a peerDependency.
 import {HardhatUserConfig} from '@layerzerolabs/hardhat-deploy';
 import '@layerzerolabs/hardhat-tron-solc';
 
