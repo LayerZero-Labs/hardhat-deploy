@@ -31,7 +31,6 @@
     "dist/extendedArtifacts/",
     "extendedArtifacts/",
     "dist/extendedArtifactsTron/",
-    "extendedArtifactsTron/",
     "src/",
     "types.ts",
     "LICENSE",
