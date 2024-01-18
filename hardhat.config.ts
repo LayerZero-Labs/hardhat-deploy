@@ -1,4 +1,4 @@
-import {HardhatUserConfig, internalTask, task} from 'hardhat/config';
+import {internalTask, task} from 'hardhat/config';
 import {
   TASK_COMPILE_SOLIDITY_GET_COMPILER_INPUT,
   TASK_COMPILE,
@@ -7,6 +7,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import {Artifact, BuildInfo} from 'hardhat/types';
 import murmur128 from 'murmur-128';
+// Somewhat counterintuive, @layerzerolabs/hardhat-deploy is a devDependency of itself.
+// It is required by hardhat-tron-solc who lists this package as a peerDependency.
+import {HardhatUserConfig} from '@layerzerolabs/hardhat-deploy';
+import '@layerzerolabs/hardhat-tron-solc';
 
 function addIfNotPresent(array: string[], value: string) {
   if (array.indexOf(value) === -1) {
@@ -67,9 +71,15 @@ internalTask(TASK_COMPILE_SOLIDITY_GET_COMPILER_INPUT).setAction(
 
 task(TASK_COMPILE).setAction(async (args, hre, runSuper) => {
   await runSuper(args);
-  const extendedArtifactFolderpath = 'extendedArtifacts';
+
+  let extendedArtifactFolderpath = 'extendedArtifacts';
+  if (hre.network.tron && hre.config.tronSolc.enable) {
+    extendedArtifactFolderpath = 'extendedArtifactsTron';
+  }
   fs.emptyDirSync(extendedArtifactFolderpath);
   const artifactPaths = await hre.artifacts.getArtifactPaths();
+  let indexFileContent = ''; // Content for index.ts
+  const exportedArtifacts = new Set(); // Track exported artifacts to avoid duplicates
   for (const artifactPath of artifactPaths) {
     const artifact: Artifact = await fs.readJSON(artifactPath);
     const artifactName = path.basename(artifactPath, '.json');
@@ -108,22 +118,51 @@ task(TASK_COMPILE).setAction(async (args, hre, runSuper) => {
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (extendedArtifact._format as any) = undefined;
+    const extendedArtifactFilename = artifactName + '.json';
     fs.writeFileSync(
-      path.join(extendedArtifactFolderpath, artifactName + '.json'),
+      path.join(extendedArtifactFolderpath, extendedArtifactFilename),
       JSON.stringify(extendedArtifact, null, '  ')
     );
+    // Add export line to indexFileContent for each unique artifact
+    if (!exportedArtifacts.has(artifactName)) {
+      indexFileContent += `export { default as ${artifactName} } from './${extendedArtifactFilename}';\n`;
+      exportedArtifacts.add(artifactName);
+    }
   }
+  // Write the index.ts file
+  fs.writeFileSync(
+    path.join(extendedArtifactFolderpath, 'index.ts'),
+    indexFileContent
+  );
 });
+
+const settings = {
+  optimizer: {
+    enabled: true,
+    runs: 999999,
+  },
+};
 
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.10',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 999999,
-      },
+    settings,
+  },
+  defaultNetwork: 'hardhat',
+  networks: {
+    tron: {
+      url: `http://127.0.0.1:9090/jsonrpc`,
+      tron: true,
     },
+  },
+  tronSolc: {
+    enable: true,
+    compilers: [
+      {
+        version: '0.8.11',
+        settings,
+      },
+    ],
   },
   paths: {
     sources: 'solc_0.8',

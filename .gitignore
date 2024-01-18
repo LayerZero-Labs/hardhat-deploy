@@ -13,8 +13,8 @@ node_modules/
 .vscode/*
 !.vscode/settings.json.default
 
-cache/
-artifacts/
+cache*/
+artifacts*/
 
 .yalc
 yalc.lock
