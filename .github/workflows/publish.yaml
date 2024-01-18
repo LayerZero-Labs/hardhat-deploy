@@ -5,7 +5,7 @@ on:
   release:
     types: [published]
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,11 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm test
-      - run: npm publish --access=restricted
-        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+      - run: |
+          if [ "${{ github.event_name }}" = "release" ] && [ "${{ github.event.action }}" = "published" ]; then
+            npm publish --access=restricted
+          else
+            npm publish --access=restricted --dry-run
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
