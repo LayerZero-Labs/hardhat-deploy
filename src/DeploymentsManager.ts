@@ -75,7 +75,7 @@ export class DeploymentsManager {
   public impersonateUnknownAccounts: boolean;
   public impersonatedAccounts: string[];
   public addressesToProtocol: {[address: string]: string} = {};
-  public readonly isTronNetworkWithTronSolc: boolean;
+  public readonly isTronNetworkWithTronSolc: boolean = false;
 
   private network: Network;
 
@@ -137,8 +137,9 @@ export class DeploymentsManager {
       runAsNode: false,
     };
     this.env = env;
-    this.isTronNetworkWithTronSolc =
-      network.tron && (this.env.config as any)?.tronSolc?.enable;
+    if (network.tron && (this.env.config as any)?.tronSolc?.enable) {
+      this.isTronNetworkWithTronSolc = true;
+    }
     this.deploymentsPath = env.config.paths.deployments;
 
     // TODO
@@ -355,6 +356,7 @@ export class DeploymentsManager {
       },
       getNetworkName: () => this.getNetworkName(),
       getGasUsed: () => this.db.gasUsed.toNumber(),
+      isTronNetworkWithTronSolc: this.isTronNetworkWithTronSolc,
     } as PartialExtension;
 
     const print = (msg: string) => {

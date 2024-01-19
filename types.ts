@@ -300,6 +300,7 @@ export interface DeploymentsExtension {
   read(name: string, methodName: string, ...args: any[]): Promise<any>;
   getSigner(address: string): Promise<Signer>;
   // rawCall(to: Address, data: string): Promise<any>; // TODO ?
+  readonly isTronNetworkWithTronSolc: boolean;
 }
 
 export interface ContractExport {
