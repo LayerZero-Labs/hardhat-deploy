@@ -33,11 +33,31 @@ describe('@layerzerolabs/hardhat-deploy with a non-tron network', function () {
   it('should not set the tron boolean in the network', function () {
     expect(this.env.network.tron).to.be.undefined;
   });
+  it('isTronNetworkWithTronSolc should be false', function () {
+    expect(this.env.deployments.isTronNetworkWithTronSolc).to.be.false;
+  });
+  it('should return a regular default artifact', function () {
+    const artifact = getDefaultArtifact(
+      'DefaultProxyAdmin',
+      this.env.deployments.isTronNetworkWithTronSolc
+    );
+    expect(artifact).to.equal(regularProxyAdmin);
+  });
 });
 
 describe('@layerzerolabs/hardhat-deploy with a tron network', function () {
   useEnvironment('hardhat-project', 'tron');
   it('It should set the tron boolean in the network', function () {
     expect(this.env.network.tron).to.be.true;
+  });
+  it('isTronNetworkWithTronSolc should be true', function () {
+    expect(this.env.deployments.isTronNetworkWithTronSolc).to.be.true;
+  });
+  it('should return a tron default artifact', function () {
+    const artifact = getDefaultArtifact(
+      'DefaultProxyAdmin',
+      this.env.deployments.isTronNetworkWithTronSolc
+    );
+    expect(artifact).to.equal(tronProxyAdmin);
   });
 });
