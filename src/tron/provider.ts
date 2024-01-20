@@ -53,6 +53,8 @@ export class TronWeb3Provider extends Web3Provider {
   protected signers = new Map<string, TronSigner>();
   public ro_tronweb: TronWeb;
   public gasPrice: {time: number; value?: BigNumber} = {time: Time.NOW};
+  public maxFeeLimit?: number;
+  public FALLBACK_MAX_FEE_LIMIT = 15e9; // 15,000 TRX;
   private readonly fullHost: string;
   private readonly headers: Record<string, string>;
 
@@ -305,7 +307,7 @@ export class TronWeb3Provider extends Web3Provider {
    * @param hash - The hash of the transaction to wait for.
    * @returns A function that takes `targetConfirmations` and returns a promise that resolves to the transaction receipt.
    */
-  _buildWait(initialConfirmations: number, hash: string) {
+  private _buildWait(initialConfirmations: number, hash: string) {
     return async (
       targetConfirmations?: number
     ): Promise<TransactionReceipt> => {
@@ -418,5 +420,21 @@ export class TronWeb3Provider extends Web3Provider {
   isSendTRX(to?: string, from?: string, data?: string): boolean {
     if ([to, from].some((f) => f == undefined)) return false;
     return !data || data == '0x';
+  }
+
+  /**
+   * Asynchronously retrieves and caches the maximum fee limit from the chain parameters.
+   * If the parameter is not found, a predefined fallback value is used.
+   * The value is cached for future calls to this method.
+   *
+   * @returns {Promise<number>} A promise that resolves with the cached or newly retrieved maximum fee limit.
+   */
+  async getMaxFeeLimit(): Promise<number> {
+    if (this.maxFeeLimit == undefined) {
+      const params = await this.ro_tronweb.trx.getChainParameters();
+      const param = params.find(({key}) => key === 'getMaxFeeLimit');
+      this.maxFeeLimit = param?.value ?? this.FALLBACK_MAX_FEE_LIMIT;
+    }
+    return this.maxFeeLimit;
   }
 }

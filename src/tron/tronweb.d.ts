@@ -355,7 +355,7 @@ declare module 'tronweb' {
       timestamp?: number,
       options?: Record<string, unknown>
     ): Promise<Record<string, unknown>>;
-    getChainParameters(): Promise<ChainParameter[] | any>;
+    getChainParameters(): Promise<ChainParameter[]>;
     getConfirmedTransaction(
       transactionID: string
     ): Promise<Record<string, unknown>>;

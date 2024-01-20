@@ -9,12 +9,10 @@ import TronWeb from 'tronweb';
 import {TronWeb3Provider} from './provider';
 import {Time, TronWebGetTransactionError, strip0x} from './utils';
 import {CreateSmartContract, MethodSymbol, TronTxMethods} from './types';
-import {TronWebError} from './utils';
 import {
   BlockTransaction,
   ContractExecutionParams,
   Transaction,
-  TronWebError1,
 } from 'tronweb/interfaces';
 import {
   TransactionRequest,
@@ -34,7 +32,6 @@ import {
  * - `energyFactors`: Map to store and manage energy factors for different contracts.
  * - `MAX_ENERGY_FACTOR`: Maximum energy factor, used in calculating transaction fees.
  * - `MAX_ENERGY_DIVISOR`: A workaround divisor for handling BigNumber calculations.
- * - `MAX_FEE_LIMIT`: Upper bound on the fee limit allowed by the Tron network.
  *
  * @extends Wallet
  *
@@ -50,7 +47,6 @@ export class TronSigner extends Wallet {
   public energyFactors = new Map<string, {time: number; value: number}>();
   public MAX_ENERGY_FACTOR = 1.2;
   public MAX_ENERGY_DIVISOR = 1000;
-  public MAX_FEE_LIMIT = 1000000000;
 
   constructor(
     fullHost: string,
@@ -182,8 +178,11 @@ export class TronSigner extends Wallet {
       .mul(enegyPrice)
       .mul(factor_adj)
       .div(this.MAX_ENERGY_DIVISOR);
-    if (feeLimit.gt(BigNumber.from(this.MAX_FEE_LIMIT))) {
-      return this.MAX_FEE_LIMIT;
+    const maxFeeLimit = await (
+      this.provider as TronWeb3Provider
+    ).getMaxFeeLimit();
+    if (feeLimit.gt(BigNumber.from(maxFeeLimit))) {
+      return maxFeeLimit;
     }
     return feeLimit.toNumber();
   }
